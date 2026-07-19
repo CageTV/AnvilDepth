@@ -1,57 +1,60 @@
-# AnvilDepth
+# AnvilDepth RTX
 
-Merged project: your AnvilDepth UI (drag-and-drop, Relief sliders, multi-format export)
-+ DepthMapper's ONNX depth engine, under one name. DepthMapper is retired as a separate
-project — everything lives here now.
+![AnvilDepth RTX](https://raw.githubusercontent.com/CageTV/AnvilDepth/main/anvildepth_rtx_logo.jpg)
 
-Two generation modes, toggled by the **Use AI** checkbox:
+Turn any image into a clean, CNC-ready depth map — locally, on your own GPU. No cloud, no uploads, no subscription.
 
-- **Relief mode (default, "Use AI" unchecked)** — pure algorithmic pipeline: de-light →
-  low/mid/high/detail frequency-band separation → tone mapping. This is what your
-  reference PNG was close to, and it doesn't need any model file.
-- **AI mode ("Use AI" checked)** — local Depth-Anything V2 (ONNX, offline). "HQ Tiled"
-  splits the source into overlapping tiles run through the model near its native
-  resolution and feather-blends them, since a single global pass squashes a large
-  texture atlas down to 518x518 and loses most of the detail.
+Built with Skyrim texture modding in mind (bas-relief armor, ornament, and prop textures), but it works on any photo, texture, or AI render you want turned into a height/depth map.
 
-**Honesty check:** I don't have your original `ImageProcessor`/`DepthEngine`/`StlExporter`
-— those weren't in what you uploaded, so this is a from-scratch reconstruction based on
-the slider names and defaults in your XAML. The overall structure (de-light → frequency
-bands → tone curve) should behave the way the UI implies, but exact constants (blur
-sigmas, de-light formula, tone-curve shape) are my best judgment, not a match to
-whatever the earlier project actually did. Compare against your reference and tune the
-values marked in `ImageProcessor.cs` if it's off.
+---
 
-## Setup
+## What it does
 
-1. Open `AnvilDepth.sln` in Visual Studio 2022+.
-2. NuGet restores: `Microsoft.ML.OnnxRuntime.DirectML`, `OpenCvSharp4`, `OpenCvSharp4.runtime.win`.
-   - I removed `Microsoft.ML.OnnxRuntime.Gpu` from the csproj — it and `.DirectML` both
-     ship a native `onnxruntime.dll`, and having both in one project causes the wrong
-     one to load unpredictably. DirectML covers any DX12 GPU (NVIDIA/AMD/Intel) without
-     needing the separate CUDA/cuDNN toolkit `.Gpu` requires. If you specifically want
-     CUDA, swap the package back and drop DirectML instead — don't run both.
-3. For AI mode: download `onnx-community/depth-anything-v2-small` (`onnx/model.onnx`)
-   from Hugging Face, rename to `model.onnx`, place in `AnvilDepth/Models/model.onnx`.
-   Relief mode works without this.
+- **Two generation modes**
+  - **Relief** — a pure algorithmic pipeline (de-lighting + frequency-band separation + tone mapping). No AI model required, works instantly on any image.
+  - **AI Depth** — local AI depth estimation via a Depth-Anything V2 ONNX model, running entirely on your own machine. Includes an **HQ Tiled** option that runs large textures through the model in overlapping tiles near its native resolution, so big texture atlases keep their fine detail instead of getting squashed down.
+- **Drag-and-drop** — drop an image straight onto the window, or click to browse.
+- **Live sliders** for flatten/de-light strength, frequency bands (low/mid/high/detail), gamma, shadows/midtones/highlights, invert, background removal, and seamless tiling — with instant preview in Relief mode.
+- **Export formats**: 16-bit PNG, 32-bit EXR, 32-bit TIFF, and a downsampled STL mesh (ready for a slicer or CNC/CAM package).
+- **100% local and offline** — nothing leaves your machine.
 
-## Known rough edges to watch for
+---
 
-- **EXR export** depends on your local OpenCV build including OpenEXR support — not
-  guaranteed in all prebuilt `OpenCvSharp4.runtime.win` versions. If `Save 32-bit EXR`
-  throws, 32-bit TIFF or 16-bit PNG are safer fallbacks with the same precision options.
-- **Performance**: the tone-mapping and seamless-blend passes use per-pixel `Mat`
-  indexers for clarity, which is fine for a one-shot "Generate" click but will feel slow
-  on very large atlases (2048px+). `AllowUnsafeBlocks` is already on in the csproj if you
-  want to swap those loops for raw pointer access later.
-- **Seamless blend** cross-contaminates slightly where the column-blend and row-blend
-  zones overlap in the corners — minor artifact, fine for tiling aid, not pixel-perfect.
-- **STL export** downsamples to a 256x256 grid max (full-res would be tens of millions
-  of triangles). Change `MaxGridSize` in `StlExporter.cs` if you want more/less detail.
+## Requirements
 
-## File map
+**Hardware**
+- Windows 10/11, 64-bit
+- A DirectX 12–capable GPU (any modern NVIDIA, AMD, or Intel GPU works via DirectML — an NVIDIA RTX card is not required, though it will run faster). CPU-only also works, just slower.
+- 16 GB RAM recommended
 
-- `MainWindow.xaml(.cs)`, `App.xaml(.cs)` — your existing UI, unchanged
-- `Services/ImageProcessor.cs` — Relief pipeline + AI post-processing + all save formats
-- `Services/DepthEngine.cs` — ONNX inference, global + tiled HQ passes
-- `Services/StlExporter.cs` — heightmap → binary STL mesh
+**To use AI Depth mode**
+- Download the `onnx-community/depth-anything-v2-small` ONNX model from Hugging Face, rename it `model.onnx`, and place it in the app's `Models` folder. Relief mode works out of the box without this.
+
+No CUDA Toolkit, cuDNN, or separate NVIDIA driver install is required — GPU acceleration goes through DirectML, which ships with Windows.
+
+---
+
+## Quick start
+
+1. Launch AnvilDepth.
+2. Drag an image onto the window (or click the drop zone to browse for one).
+3. Leave **Use AI** unchecked for the fast algorithmic Relief pipeline, or check it to use AI Depth mode (needs `model.onnx` installed — see above).
+4. Adjust the sliders until the preview looks right for your material and depth. Relief mode updates live as you drag; AI mode needs a click of **Generate** to re-run.
+5. Export as PNG, EXR, TIFF, or STL.
+
+## Tips
+
+- **EXR export** depends on your OpenCV build including OpenEXR support. If it fails to save, use 32-bit TIFF or 16-bit PNG instead — same precision, more reliable.
+- **STL export** is capped at a 256×256 grid to keep triangle counts sane for slicers/CAM tools. If you need more resolution, that cap can be raised (ask whoever built your copy of the app).
+- **Large textures (2048px+)** will feel slower to process — this is expected, it's a one-shot "click Generate and wait" tool, not real-time.
+- **Seamless blend** is meant as a tiling aid for repeating textures; it isn't pixel-perfect at the corners.
+
+---
+
+## Support
+
+This is a small, local tool — there's no online service or account behind it. If something looks wrong or crashes, check the on-screen status message first; most failures (missing model file, bad EXR support) show a plain-English reason.
+
+---
+
+*A note on this README: a couple of items from the original project description (CUDA/TensorRT acceleration, a "Large" AI model option, DDS export, and named gamma presets) aren't in the current build, which uses DirectML and a single ONNX model file. If those are planned additions rather than things I've missed, let me know and I'll fold them in.*
