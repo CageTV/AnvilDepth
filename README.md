@@ -57,4 +57,6 @@ This is a small, local tool — there's no online service or account behind it. 
 
 ---
 
-*A note on this README: a couple of items from the original project description (CUDA/TensorRT acceleration, a "Large" AI model option, DDS export, and named gamma presets) aren't in the current build, which uses DirectML and a single ONNX model file. If those are planned additions rather than things I've missed, let me know and I'll fold them in.*
+Credits
+
+With thanks to Mazze45 for guidance in refining and creating this tool.
