@@ -1,103 +1,335 @@
-
 using System;
-using System.Linq;
+using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using OpenCvSharp;
-namespace AnvilDepth.Services
+
+namespace AnvilDepth.Services;
+
+/// <summary>
+/// The algorithmic "Relief" pipeline: de-light -> frequency-band separation -> tone mapping.
+/// This is a reconstruction from the slider names/defaults in MainWindow.xaml, not a copy of
+/// a prior implementation — the exact math (band sigmas, de-light formula, tone curve shape)
+/// is my best-guess starting point. Tune the constants marked below if it doesn't match what
+/// you remember from the earlier project.
+/// </summary>
+public static class ImageProcessor
 {
-    public static class ImageProcessor
+    public static float[] ProcessTextureAtlasAdvanced(
+        byte[] bgra, int width, int height,
+        float detail, float gamma, bool invert,
+        float highlights, float midtones, float shadows,
+        bool removeBg, bool useLab,
+        float flatten, float flattenRadius,
+        float lowFreq, float midFreq, float highFreq,
+        bool seamless, float seamBlend,
+        bool zeroMidGray, float zeroLevel,
+        bool percentile, float loPct, float hiPct)
     {
-        public static float[] ProcessForSculptOKQuality(float[] depth, int w, int h, float strength, float detail, float gamma, bool invert, float highlights = 1f, float midtones = 1f, float shadows = 1f)
+        using var srcBgra = new Mat(height, width, MatType.CV_8UC4);
+        Marshal.Copy(bgra, 0, srcBgra.Data, bgra.Length);
+
+        using var bgr = new Mat();
+        Cv2.CvtColor(srcBgra, bgr, ColorConversionCodes.BGRA2BGR);
+
+        using var luma = new Mat();
+        if (useLab)
         {
-            try{
-            var sorted = depth.OrderBy(v=>v).ToArray();
-            float dMin = sorted[(int)(sorted.Length*0.02)];
-            float dMax = sorted[(int)(sorted.Length*0.98)];
-            float range = Math.Max(dMax-dMin, 0.001f);
-            float[] norm = new float[depth.Length];
-            for(int i=0;i<depth.Length;i++){ float v=(depth[i]-dMin)/range; v=Math.Clamp(v,0,1); if(invert) v=1f-v; norm[i]=v; }
-            if(detail>0.001f){
-                try{
-                    float[,] arr = new float[h,w];
-                    for(int y=0;y<h;y++) for(int x=0;x<w;x++) arr[y,x]=norm[y*w+x];
-                    var mat = Mat.FromArray(arr);
-                    var blurred = new Mat();
-                    Cv2.BilateralFilter(mat, blurred, 9, 75, 75);
-                    for(int y=0;y<h;y++){ for(int x=0;x<w;x++){ int idx = y*w+x; float low = blurred.At<float>(y,x); float high = norm[idx] - low; norm[idx] = norm[idx] + high * detail * 3.0f; } }
-                }catch(Exception ex){ System.Diagnostics.Debug.WriteLine($"Detail fail: {ex.Message}"); }
+            using var lab = new Mat();
+            Cv2.CvtColor(bgr, lab, ColorConversionCodes.BGR2Lab);
+            Cv2.ExtractChannel(lab, luma, 0);
+        }
+        else
+        {
+            Cv2.CvtColor(bgr, luma, ColorConversionCodes.BGR2GRAY);
+        }
+        using var luma32f = new Mat();
+        luma.ConvertTo(luma32f, MatType.CV_32FC1, 1.0 / 255.0);
+
+        // --- 1. De-light: pull out a large-scale lighting gradient and subtract a fraction of it ---
+        double lightSigma = Math.Max(3.0, flattenRadius / 2.5);
+        using var lightMap = new Mat();
+        Cv2.GaussianBlur(luma32f, lightMap, new OpenCvSharp.Size(0, 0), lightSigma);
+        Scalar meanLight = Cv2.Mean(lightMap);
+        using var lightDelta = new Mat();
+        Cv2.Subtract(lightMap, new Scalar(meanLight.Val0), lightDelta);
+        using var flattened = new Mat();
+        Cv2.Subtract(luma32f, lightDelta * flatten, flattened);
+
+        // --- 2. Frequency-band separation (fixed sigmas; Low/Mid/High/Detail are gains) ---
+        using var b1 = new Mat(); Cv2.GaussianBlur(flattened, b1, new OpenCvSharp.Size(0, 0), 2.0);
+        using var b2 = new Mat(); Cv2.GaussianBlur(flattened, b2, new OpenCvSharp.Size(0, 0), 8.0);
+        using var b3 = new Mat(); Cv2.GaussianBlur(flattened, b3, new OpenCvSharp.Size(0, 0), 24.0);
+
+        using var midBand = new Mat(); Cv2.Subtract(b2, b3, midBand);
+        using var highBand = new Mat(); Cv2.Subtract(b1, b2, highBand);
+        using var detailBand = new Mat(); Cv2.Subtract(flattened, b1, detailBand);
+
+        using var combined = new Mat();
+        Cv2.AddWeighted(b3, lowFreq, midBand, midFreq, 0, combined);
+        Cv2.AddWeighted(combined, 1.0, highBand, highFreq, 0, combined);
+        Cv2.AddWeighted(combined, 1.0, detailBand, detail, 0, combined);
+
+        // --- 3. Tone mapping ---
+        using var toned = new Mat();
+        ApplyToneMapping(combined, toned, gamma, shadows, midtones, highlights, percentile, loPct, hiPct);
+
+        if (invert)
+        {
+            using var invMat = new Mat();
+            Cv2.Subtract(new Scalar(1.0), toned, invMat);
+            invMat.CopyTo(toned);
+        }
+
+        if (removeBg)
+        {
+            ApplyBackgroundRemoval(toned, srcBgra);
+        }
+
+        if (seamless)
+        {
+            ApplySeamlessBlend(toned, seamBlend);
+        }
+
+        if (zeroMidGray || Math.Abs(zeroLevel) > 0.0001f)
+        {
+            using var shifted = new Mat();
+            Cv2.Add(toned, new Scalar(zeroLevel - 0.5), shifted);
+            Cv2.Min(shifted, new Scalar(1.0), shifted);
+            Cv2.Max(shifted, new Scalar(0.0), shifted);
+            shifted.CopyTo(toned);
+        }
+
+        return MatToFloatArray(toned, width, height);
+    }
+
+    /// <summary>Post-processes an AI-estimated depth map: contrast/strength, real detail injection from the
+    /// source texture, tone mapping. sourceBgra may be null (detail injection is skipped if so).</summary>
+    public static float[] ProcessForSculptOKQuality(
+        float[] depth, int width, int height, byte[]? sourceBgra,
+        float strength, float detail, float lowFreq, float midFreq, float highFreq, float gamma, bool invert,
+        float highlights, float midtones, float shadows,
+        bool zeroMidGray, float zeroLevel)
+    {
+        using var src = new Mat(height, width, MatType.CV_32FC1);
+        Marshal.Copy(depth, 0, src.Data, depth.Length);
+
+        // Contrast around the midpoint
+        using var centered = new Mat();
+        Cv2.Subtract(src, new Scalar(0.5), centered);
+        using var amplified = new Mat();
+        Cv2.Add(centered * strength, new Scalar(0.5), amplified);
+
+        // Sobel *magnitude* discards sign/direction, so every edge becomes a thin bright outline
+        // regardless of which way the surface curves — that's the "scribble/noise" look. Use the same
+        // signed band-pass (difference-of-blurs) the Relief pipeline uses instead: it preserves which
+        // side of a bump is locally brighter vs. darker, which is what actually reads as rounded relief
+        // instead of an outline.
+        using var withDetail = new Mat();
+        if (sourceBgra != null && (detail > 0.001f || midFreq > 0.001f || highFreq > 0.001f || lowFreq > 0.001f))
+        {
+            using var srcBgraMat = new Mat(height, width, MatType.CV_8UC4);
+            Marshal.Copy(sourceBgra, 0, srcBgraMat.Data, sourceBgra.Length);
+            using var bgr = new Mat();
+            Cv2.CvtColor(srcBgraMat, bgr, ColorConversionCodes.BGRA2BGR);
+            using var gray = new Mat();
+            Cv2.CvtColor(bgr, gray, ColorConversionCodes.BGR2GRAY);
+            using var gray32f = new Mat();
+            gray.ConvertTo(gray32f, MatType.CV_32FC1, 1.0 / 255.0);
+
+            // Four signed bands, same sigmas as the Relief pipeline:
+            //  - low    (24+):   broad shape from the source texture itself, mean-centered so it adds
+            //                     contrast rather than fighting the AI's own macro depth as a second vote
+            //  - mid    (8->24): rounded mass — a whole buckle or shoulder plate as one soft volume
+            //  - high   (2->8):  rounded detail — individual studs, strap edges
+            //  - detail (0->2):  fine texture — stitching, engraving, surface grain
+            using var b1 = new Mat(); Cv2.GaussianBlur(gray32f, b1, new OpenCvSharp.Size(0, 0), 2.0);
+            using var b2 = new Mat(); Cv2.GaussianBlur(gray32f, b2, new OpenCvSharp.Size(0, 0), 8.0);
+            using var b3 = new Mat(); Cv2.GaussianBlur(gray32f, b3, new OpenCvSharp.Size(0, 0), 24.0);
+            using var lowBand = new Mat();
+            Scalar meanB3 = Cv2.Mean(b3);
+            Cv2.Subtract(b3, new Scalar(meanB3.Val0), lowBand);
+            using var midBand = new Mat(); Cv2.Subtract(b2, b3, midBand);
+            using var highBand = new Mat(); Cv2.Subtract(b1, b2, highBand);
+            using var detailBand = new Mat(); Cv2.Subtract(gray32f, b1, detailBand);
+
+            using var detailSignal = new Mat();
+            Cv2.AddWeighted(lowBand, lowFreq, midBand, midFreq, 0, detailSignal);
+            Cv2.AddWeighted(detailSignal, 1.0, highBand, highFreq, 0, detailSignal);
+            Cv2.AddWeighted(detailSignal, 1.0, detailBand, detail, 0, detailSignal);
+
+            Cv2.AddWeighted(amplified, 1.0, detailSignal, 1.5, 0, withDetail);
+        }
+        else
+        {
+            amplified.CopyTo(withDetail);
+        }
+
+        using var toned = new Mat();
+        ApplyToneMapping(withDetail, toned, gamma, shadows, midtones, highlights, percentile: false, 0.02f, 0.98f);
+
+        if (invert)
+        {
+            using var invMat = new Mat();
+            Cv2.Subtract(new Scalar(1.0), toned, invMat);
+            invMat.CopyTo(toned);
+        }
+
+        if (zeroMidGray || Math.Abs(zeroLevel) > 0.0001f)
+        {
+            using var shifted = new Mat();
+            Cv2.Add(toned, new Scalar(zeroLevel - 0.5), shifted);
+            Cv2.Min(shifted, new Scalar(1.0), shifted);
+            Cv2.Max(shifted, new Scalar(0.0), shifted);
+            shifted.CopyTo(toned);
+        }
+
+        return MatToFloatArray(toned, width, height);
+    }
+
+    private static void ApplyToneMapping(Mat src, Mat dst, float gamma, float shadows, float midtones, float highlights,
+        bool percentile, float loPct, float hiPct)
+    {
+        using var normalized = new Mat();
+        if (percentile)
+        {
+            var (lo, hi) = ComputePercentiles(src, loPct, hiPct);
+            double range = Math.Max(hi - lo, 1e-6);
+            Cv2.Subtract(src, new Scalar(lo), normalized);
+            normalized.ConvertTo(normalized, -1, 1.0 / range, 0);
+        }
+        else
+        {
+            Cv2.Normalize(src, normalized, 0, 1, NormTypes.MinMax);
+        }
+        Cv2.Min(normalized, new Scalar(1.0), normalized);
+        Cv2.Max(normalized, new Scalar(0.0), normalized);
+
+        using var gammaCorrected = new Mat();
+        Cv2.Pow(normalized, 1.0 / Math.Max(0.01, gamma), gammaCorrected);
+
+        // Three-zone level adjustment: shadows/midtones/highlights each scale their own weighted region.
+        dst.Create(src.Size(), MatType.CV_32FC1);
+        for (int y = 0; y < src.Rows; y++)
+        {
+            for (int x = 0; x < src.Cols; x++)
+            {
+                float v = gammaCorrected.At<float>(y, x);
+                float shadowW = Math.Clamp(1f - 2f * v, 0f, 1f);
+                float highlightW = Math.Clamp(2f * v - 1f, 0f, 1f);
+                float midW = 1f - shadowW - highlightW;
+                float adjusted = v * (shadowW * shadows + midW * midtones + highlightW * highlights);
+                dst.Set(y, x, Math.Clamp(adjusted, 0f, 1f));
             }
-            for(int i=0;i<norm.Length;i++){ float v=norm[i]*strength; v=(float)Math.Pow(Math.Clamp(v,0,1), gamma); norm[i]=v; }
-            norm = ApplyToneControls(norm, highlights, midtones, shadows);
-            for(int i=0;i<norm.Length;i++) norm[i]=Math.Clamp(norm[i],0,1);
-            return norm;
-            }catch(Exception ex){ throw new Exception($"ProcessForSculptOKQuality failed: {ex.Message}", ex); }
         }
-        public static float[] ProcessTextureAtlas(byte[] bgraPixels, int w, int h, float detail, float gamma, bool invert, float highlights, float midtones, float shadows, bool removeBg)
+    }
+
+    private static (float lo, float hi) ComputePercentiles(Mat src, float loPct, float hiPct)
+    {
+        var values = MatToFloatArray(src, src.Cols, src.Rows);
+        Array.Sort(values);
+        int loIdx = Math.Clamp((int)(values.Length * loPct), 0, values.Length - 1);
+        int hiIdx = Math.Clamp((int)(values.Length * hiPct), 0, values.Length - 1);
+        return (values[loIdx], values[hiIdx]);
+    }
+
+    private static void ApplyBackgroundRemoval(Mat toned, Mat srcBgra)
+    {
+        using var alpha = new Mat();
+        Cv2.ExtractChannel(srcBgra, alpha, 3);
+        using var mask = new Mat();
+        Cv2.Threshold(alpha, mask, 10, 255, ThresholdTypes.Binary);
+        using var maskF = new Mat();
+        mask.ConvertTo(maskF, MatType.CV_32FC1, 1.0 / 255.0);
+
+        using var fg = new Mat();
+        Cv2.Multiply(toned, maskF, fg);
+        using var invMaskF = new Mat();
+        Cv2.Subtract(new Scalar(1.0), maskF, invMaskF);
+        using var bgPart = new Mat();
+        Cv2.Multiply(new Mat(toned.Size(), MatType.CV_32FC1, new Scalar(0.5)), invMaskF, bgPart);
+        Cv2.Add(fg, bgPart, toned);
+    }
+
+    /// <summary>Feather-blends opposite edges so the map tiles more cleanly.</summary>
+    private static void ApplySeamlessBlend(Mat toned, float seamBlend)
+    {
+        int width = toned.Cols, height = toned.Rows;
+        int blendX = Math.Clamp((int)(seamBlend * width * 0.1), 2, width / 4);
+        int blendY = Math.Clamp((int)(seamBlend * height * 0.1), 2, height / 4);
+
+        using var original = toned.Clone();
+        for (int y = 0; y < height; y++)
         {
-            try{
-            if(bgraPixels==null) throw new ArgumentNullException(nameof(bgraPixels));
-            if(bgraPixels.Length < w*h*4) throw new Exception($"BGRA buffer too small: {bgraPixels.Length} vs {w*h*4}");
-            int n = w*h;
-            float[] gray = new float[n];
-            float[] low = new float[n];
-            for(int i=0;i<n;i++){ int o=i*4; float b=bgraPixels[o]/255f; float g=bgraPixels[o+1]/255f; float r=bgraPixels[o+2]/255f; gray[i] = r*0.299f + g*0.587f + b*0.114f; }
-            try{
-                float[,] arr = new float[h,w];
-                for(int y=0;y<h;y++) for(int x=0;x<w;x++) arr[y,x]=gray[y*w+x];
-                var mat = Mat.FromArray(arr);
-                var blurred = new Mat();
-                Cv2.BilateralFilter(mat, blurred, 15, 90, 90);
-                for(int y=0;y<h;y++) for(int x=0;x<w;x++) low[y*w+x]=blurred.At<float>(y,x);
-            }catch{ Array.Copy(gray, low, n); }
-            float[] combined = new float[n];
-            for(int i=0;i<n;i++){ float g = gray[i]; float l = low[i]; float high = g - l; float v = l - high * detail * 3.0f; v = v * 0.85f + l * 0.15f; combined[i]=v; }
-            var sorted = combined.OrderBy(v=>v).ToArray();
-            float dMin = sorted[(int)(sorted.Length*0.02)];
-            float dMax = sorted[(int)(sorted.Length*0.98)];
-            float range = Math.Max(dMax-dMin, 0.001f);
-            for(int i=0;i<n;i++){ float v=(combined[i]-dMin)/range; v=Math.Clamp(v,0,1); if(invert) v=1f-v; v=(float)Math.Pow(v, gamma); combined[i]=v; }
-            combined = ApplyToneControls(combined, highlights, midtones, shadows);
-            if(removeBg){ for(int i=0;i<n;i++){ float l = low[i]; float mask; if(l < 0.08f) mask=0f; else if(l < 0.22f) mask=(l-0.08f)/0.14f; else mask=1f; combined[i] *= mask; if(mask < 0.02f) combined[i]=0f; } }
-            for(int i=0;i<n;i++) combined[i]=Math.Clamp(combined[i],0,1);
-            return combined;
-            }catch(Exception ex){ throw new Exception($"TextureAtlas failed: {ex.Message}", ex); }
-        }
-        public static float[] ApplyToneControls(float[] depth, float highlights, float midtones, float shadows)
-        {
-            float[] outArr = new float[depth.Length];
-            for(int i=0;i<depth.Length;i++){
-                float v = depth[i];
-                float shadowMask = 1f - Math.Clamp(v / 0.5f, 0f, 1f); shadowMask *= shadowMask;
-                float highlightMask = Math.Clamp((v - 0.5f) / 0.5f, 0f, 1f); highlightMask *= highlightMask;
-                float midMask = 1f - Math.Abs(v - 0.5f) * 2f; midMask = Math.Max(0f, midMask); midMask *= midMask;
-                float shadowAdj = v + (shadows - 1f) * shadowMask * 0.6f;
-                float highlightAdj = shadowAdj + (highlights - 1f) * highlightMask * 0.6f;
-                float midAdj = highlightAdj;
-                if (Math.Abs(midtones - 1f) > 0.001f){ float centered = midAdj - 0.5f; float contrasted = centered * midtones; float target = contrasted + 0.5f; midAdj = Lerp(highlightAdj, target, midMask * 0.9f); }
-                outArr[i] = Math.Clamp(midAdj, 0f, 1f);
+            for (int i = 0; i < blendX; i++)
+            {
+                float t = (i + 1f) / (blendX + 1f);
+                float left = original.At<float>(y, i);
+                float right = original.At<float>(y, width - 1 - i);
+                toned.Set(y, i, left * t + right * (1 - t));
+                toned.Set(y, width - 1 - i, right * t + left * (1 - t));
             }
-            return outArr;
         }
-        static float Lerp(float a, float b, float t) => a + (b - a) * t;
-        public static BitmapSource FloatArrayToBitmapSource(float[] depth, int w, int h){
-            byte[] pixels = new byte[w*h];
-            for(int i=0;i<depth.Length;i++) pixels[i]=(byte)(Math.Clamp(depth[i],0,1)*255);
-            return BitmapSource.Create(w,h,96,96, PixelFormats.Gray8, null, pixels, w);
+        using var afterX = toned.Clone();
+        for (int x = 0; x < width; x++)
+        {
+            for (int i = 0; i < blendY; i++)
+            {
+                float t = (i + 1f) / (blendY + 1f);
+                float top = afterX.At<float>(i, x);
+                float bottom = afterX.At<float>(height - 1 - i, x);
+                toned.Set(i, x, top * t + bottom * (1 - t));
+                toned.Set(height - 1 - i, x, bottom * t + top * (1 - t));
+            }
         }
-        public static void SaveAs16Bit(float[] depth, int w, int h, string path){
-            ushort[,] arr = new ushort[h,w];
-            for(int y=0;y<h;y++) for(int x=0;x<w;x++) arr[y,x]=(ushort)(Math.Clamp(depth[y*w+x],0,1)*65535);
-            var mat = Mat.FromArray(arr);
-            Cv2.ImWrite(path, mat);
-        }
-        public static void SaveAsEXR(float[] depth, int w, int h, string path){
-            try{
-                float[,] arr = new float[h,w];
-                for(int y=0;y<h;y++) for(int x=0;x<w;x++) arr[y,x]=depth[y*w+x];
-                var mat = Mat.FromArray(arr);
-                if(!Cv2.ImWrite(path, mat)) SaveAs16Bit(depth,w,h, System.IO.Path.ChangeExtension(path,".png"));
-            }catch{ SaveAs16Bit(depth,w,h, System.IO.Path.ChangeExtension(path,".png")); }
-        }
+    }
+
+    private static float[] MatToFloatArray(Mat mat, int w, int h)
+    {
+        bool cloned = !mat.IsContinuous();
+        Mat contiguous = cloned ? mat.Clone() : mat;
+        var result = new float[w * h];
+        Marshal.Copy(contiguous.Data, result, 0, w * h);
+        if (cloned) contiguous.Dispose();
+        return result;
+    }
+
+    public static BitmapSource FloatArrayToBitmapSource(float[] data, int width, int height)
+    {
+        var pixels = new byte[width * height];
+        for (int i = 0; i < pixels.Length; i++)
+            pixels[i] = (byte)(Math.Clamp(data[i], 0f, 1f) * 255f);
+
+        var bmp = new WriteableBitmap(width, height, 96, 96, PixelFormats.Gray8, null);
+        bmp.WritePixels(new Int32Rect(0, 0, width, height), pixels, width, 0);
+        bmp.Freeze();
+        return bmp;
+    }
+
+    public static void SaveAs16Bit(float[] data, int width, int height, string path)
+    {
+        using var mat = new Mat(height, width, MatType.CV_16UC1);
+        var pixels = new ushort[width * height];
+        for (int i = 0; i < pixels.Length; i++)
+            pixels[i] = (ushort)(Math.Clamp(data[i], 0f, 1f) * 65535f);
+        var bytes = new byte[pixels.Length * sizeof(ushort)];
+        Buffer.BlockCopy(pixels, 0, bytes, 0, bytes.Length);
+        Marshal.Copy(bytes, 0, mat.Data, bytes.Length);
+        Cv2.ImWrite(path, mat);
+    }
+
+    public static void SaveAsEXR(float[] data, int width, int height, string path)
+    {
+        using var mat = new Mat(height, width, MatType.CV_32FC1);
+        Marshal.Copy(data, 0, mat.Data, data.Length);
+        Cv2.ImWrite(path, mat);
+    }
+
+    public static void SaveAsTiff32(float[] data, int width, int height, string path)
+    {
+        using var mat = new Mat(height, width, MatType.CV_32FC1);
+        Marshal.Copy(data, 0, mat.Data, data.Length);
+        Cv2.ImWrite(path, mat);
     }
 }

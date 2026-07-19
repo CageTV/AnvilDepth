@@ -3,24 +3,36 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <!-- Needed for System.Windows.Forms.NotifyIcon — there's no WPF-native tray icon API. -->
+    <UseWindowsForms>true</UseWindowsForms>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>AnvilDepth</AssemblyName>
+    <RootNamespace>AnvilDepth</RootNamespace>
+    <ApplicationIcon>Assets\app_icon_AnvilDepth.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.20.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.20.0" />
+    <!--
+      Only one ONNX Runtime execution-provider package should be referenced at a time —
+      Gpu (CUDA, NVIDIA-only, needs the CUDA/cuDNN toolkit installed separately) and
+      DirectML (works on any DX12 GPU: NVIDIA/AMD/Intel, no extra toolkit) both ship a
+      native onnxruntime.dll, and having both in the same output folder causes the
+      wrong one to load unpredictably. Keeping DirectML for broad compatibility;
+      swap back to the Gpu package if you specifically want CUDA.
+    -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.20.1" />
     <PackageReference Include="OpenCvSharp4" Version="4.10.0.20241107" />
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.10.0.20241107" />
-    <PackageReference Include="Pfim" Version="0.11.3" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Models\**\*" Condition="Exists('Models')"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
-    <None Include="Models\**\*" Condition="Exists('Models')"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
-    <Content Include="..\Models\**\*" Condition="Exists('..\Models')"><Link>Models\%(RecursiveDir)%(Filename)%(Extension)</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
-    <None Include="..\Models\**\*" Condition="Exists('..\Models')"><Link>Models\%(RecursiveDir)%(Filename)%(Extension)</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="Models\**" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Models')" />
+    <!-- Tray icon is loaded from disk at runtime by System.Drawing.Icon, so it needs to be on disk next to the exe. -->
+    <None Include="Assets\system_tray.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Logo is shown in the UI via a WPF Image control, so it's embedded as a resource instead. -->
+    <Resource Include="Assets\anvildepth_rtx_logo.jpg" />
   </ItemGroup>
 </Project>
