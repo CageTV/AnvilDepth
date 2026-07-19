@@ -1,0 +1,1 @@
+using System.Windows; namespace AnvilDepth { public partial class App : Application { protected override void OnStartup(StartupEventArgs e){ AppDomain.CurrentDomain.UnhandledException += (s, ex) => { System.Windows.MessageBox.Show($"CRASH: {ex.ExceptionObject}"); }; base.OnStartup(e); } } }
