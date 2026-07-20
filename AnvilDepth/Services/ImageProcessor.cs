@@ -25,7 +25,8 @@ public static class ImageProcessor
         float lowFreq, float midFreq, float highFreq,
         bool seamless, float seamBlend,
         bool zeroMidGray, float zeroLevel,
-        bool percentile, float loPct, float hiPct)
+        bool percentile, float loPct, float hiPct,
+        float[]? bgMask = null)
     {
         using var srcBgra = new Mat(height, width, MatType.CV_8UC4);
         Marshal.Copy(bgra, 0, srcBgra.Data, bgra.Length);
@@ -84,7 +85,13 @@ public static class ImageProcessor
 
         if (removeBg)
         {
-            ApplyBackgroundRemoval(toned, srcBgra);
+            // Prefer the AI-computed subject mask (works on any image, soft edges) — fall back
+            // to the original alpha-channel threshold if no background-removal model is loaded
+            // or the mask couldn't be computed, so this behaves exactly as before by default.
+            if (bgMask != null)
+                ApplyBackgroundMask(toned, bgMask, width, height);
+            else
+                ApplyBackgroundRemovalFromAlpha(toned, srcBgra);
         }
 
         if (seamless)
@@ -105,12 +112,16 @@ public static class ImageProcessor
     }
 
     /// <summary>Post-processes an AI-estimated depth map: contrast/strength, real detail injection from the
-    /// source texture, tone mapping. sourceBgra may be null (detail injection is skipped if so).</summary>
+    /// source texture, tone mapping, optional background removal. sourceBgra may be null (detail
+    /// injection is skipped if so). removeBg prefers bgMask (AI segmentation) when supplied, and
+    /// otherwise falls back to thresholding sourceBgra's alpha channel — same behavior as the
+    /// Relief pipeline, so the checkbox does the same thing in both modes.</summary>
     public static float[] ProcessForSculptOKQuality(
         float[] depth, int width, int height, byte[]? sourceBgra,
         float strength, float detail, float lowFreq, float midFreq, float highFreq, float gamma, bool invert,
         float highlights, float midtones, float shadows,
-        bool zeroMidGray, float zeroLevel)
+        bool zeroMidGray, float zeroLevel,
+        bool removeBg = false, float[]? bgMask = null)
     {
         using var src = new Mat(height, width, MatType.CV_32FC1);
         Marshal.Copy(depth, 0, src.Data, depth.Length);
@@ -176,6 +187,20 @@ public static class ImageProcessor
             invMat.CopyTo(toned);
         }
 
+        if (removeBg)
+        {
+            if (bgMask != null)
+            {
+                ApplyBackgroundMask(toned, bgMask, width, height);
+            }
+            else if (sourceBgra != null)
+            {
+                using var bgAlphaMat = new Mat(height, width, MatType.CV_8UC4);
+                Marshal.Copy(sourceBgra, 0, bgAlphaMat.Data, sourceBgra.Length);
+                ApplyBackgroundRemovalFromAlpha(toned, bgAlphaMat);
+            }
+        }
+
         if (zeroMidGray || Math.Abs(zeroLevel) > 0.0001f)
         {
             using var shifted = new Mat();
@@ -234,7 +259,11 @@ public static class ImageProcessor
         return (values[loIdx], values[hiIdx]);
     }
 
-    private static void ApplyBackgroundRemoval(Mat toned, Mat srcBgra)
+    /// <summary>Fallback background removal for when no AI segmentation mask is available: reads
+    /// whatever alpha channel the source image already has and hard-thresholds it. Only works if
+    /// the source was already a PNG with real transparency — kept for backward compatibility with
+    /// installs that don't have Models\bg_remove.onnx.</summary>
+    private static void ApplyBackgroundRemovalFromAlpha(Mat toned, Mat srcBgra)
     {
         using var alpha = new Mat();
         Cv2.ExtractChannel(srcBgra, alpha, 3);
@@ -249,6 +278,24 @@ public static class ImageProcessor
         Cv2.Subtract(new Scalar(1.0), maskF, invMaskF);
         using var bgPart = new Mat();
         Cv2.Multiply(new Mat(toned.Size(), MatType.CV_32FC1, new Scalar(0.5)), invMaskF, bgPart);
+        Cv2.Add(fg, bgPart, toned);
+    }
+
+    /// <summary>Preferred background removal: blends to neutral gray outside the subject using a
+    /// soft AI-predicted probability mask (from SegmentationEngine) instead of a hard alpha
+    /// threshold — preserves natural edge falloff (hair, fur, semi-transparent trim) and works on
+    /// any image, not just ones that already had transparency.</summary>
+    private static void ApplyBackgroundMask(Mat toned, float[] mask, int width, int height)
+    {
+        using var maskMat = new Mat(height, width, MatType.CV_32FC1);
+        Marshal.Copy(mask, 0, maskMat.Data, mask.Length);
+
+        using var fg = new Mat();
+        Cv2.Multiply(toned, maskMat, fg);
+        using var invMask = new Mat();
+        Cv2.Subtract(new Scalar(1.0), maskMat, invMask);
+        using var bgPart = new Mat();
+        Cv2.Multiply(new Mat(toned.Size(), MatType.CV_32FC1, new Scalar(0.5)), invMask, bgPart);
         Cv2.Add(fg, bgPart, toned);
     }
 

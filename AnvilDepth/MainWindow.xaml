@@ -69,7 +69,7 @@
                     <Slider x:Name="StrengthSlider" Minimum="0.2" Maximum="2.5" Value="1" ValueChanged="Slider_ValueChanged"/>
                     <TextBlock x:Name="StrengthLabel" Text="1" FontSize="10" Foreground="#666"/>
                     <CheckBox x:Name="InvertCheck" Content="Invert" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
-                    <CheckBox x:Name="RemoveBgCheck" Content="Remove BG" IsChecked="True" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
+                    <CheckBox x:Name="RemoveBgCheck" Content="Remove BG" IsChecked="True" Foreground="#AAA" FontSize="11" Checked="RemoveBg_Changed" Unchecked="RemoveBg_Changed"/>
                     <CheckBox x:Name="HighQualityCheck" Content="HQ Tiled" Foreground="#AAA" FontSize="11"/>
                     <Button x:Name="GenerateBtn" Content="GENERATE" Background="#8B5CF6" Foreground="White" Margin="0,12,0,0" Padding="0,12" Click="Generate_Click" IsEnabled="False"/>
                     <Button x:Name="SavePngBtn" Content="Save 16-bit PNG" Margin="0,6,0,0" Click="SavePng_Click" IsEnabled="False"/>
