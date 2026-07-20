@@ -7,15 +7,17 @@
         <Border Grid.Column="0" Background="#18181B" Padding="12">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <Image Source="Assets/anvildepth_rtx_logo.jpg" Height="103" Width="110"/>
-                    <TextBlock x:Name="GpuStatusText" Text="Ready" Foreground="#22C55E" TextWrapping="Wrap"/>
                     <TextBlock x:Name="DragDebugText" Text="" Foreground="#F59E0B" FontSize="10"/>
-                    <Border x:Name="DropZone" Height="120" Background="#1F1F23" CornerRadius="8" AllowDrop="True" DragEnter="DropZone_DragEnter" DragOver="DropZone_DragOver" Drop="DropZone_Drop" MouseDown="DropZone_MouseDown">
+                    <Border x:Name="DropZone" Height="104" Background="#1F1F23" CornerRadius="8" AllowDrop="True" DragEnter="DropZone_DragEnter" DragOver="DropZone_DragOver" Drop="DropZone_Drop" MouseDown="DropZone_MouseDown">
                         <Grid>
-                            <TextBlock x:Name="DropText" Text="Drop PNG/JPG" Foreground="#52525B" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="DropText" Foreground="#FFA75B64" HorizontalAlignment="Center" VerticalAlignment="Center" Height="100" Width="263" TextAlignment="Center" FontSize="16" FontWeight="Bold">
+                                <TextBlock.Background>
+                                    <ImageBrush ImageSource="/Assets/anvildepth_rtx_logo.jpg" Opacity="0.1"/>
+                                </TextBlock.Background><Run/><LineBreak/><Run/><LineBreak/><Run Text="Drop PNG/JPG"/></TextBlock>
                             <Image x:Name="InputPreview" Visibility="Collapsed" IsHitTestVisible="False"/>
                         </Grid>
                     </Border>
+                    <TextBlock x:Name="GpuStatusText" Text="Ready" Foreground="#22C55E" TextWrapping="Wrap"/>
                     <CheckBox x:Name="AiModelCheck" Content="Use AI" Foreground="White" Checked="Mode_Changed" Unchecked="Mode_Changed" Margin="0,8,0,0"/>
                     <StackPanel Orientation="Horizontal" Margin="18,4,0,0">
                         <RadioButton x:Name="ModelSmallRadio" GroupName="ModelSize" Content="Small" IsChecked="True" Foreground="#AAA" FontSize="11" Margin="0,0,10,0" Checked="ModelSize_Changed"/>
@@ -76,11 +78,42 @@
                     <Button x:Name="SaveExrBtn" Content="Save 32-bit EXR" Margin="0,4,0,0" Click="SaveExr_Click" IsEnabled="False"/>
                     <Button x:Name="SaveTiffBtn" Content="Save 32-bit TIFF" Margin="0,4,0,0" Click="SaveTiffBtn_Click" IsEnabled="False"/>
                     <Button x:Name="SaveStlBtn" Content="Save STL" Margin="0,4,0,0" Click="SaveStl_Click" IsEnabled="False"/>
+                    <TextBlock Text="7. NORMAL MAP" Foreground="#8B5CF6" FontSize="10" Margin="0,14,0,2"/>
+                    <TextBlock Text="Derived from the depth map above — not a separate AI model." Foreground="#555" FontSize="9" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                    <TextBlock Text="Strength" Foreground="#AAA" FontSize="11"/>
+                    <Slider x:Name="NormalStrengthSlider" Minimum="0.1" Maximum="10" Value="2" ValueChanged="NormalStrengthSlider_ValueChanged"/>
+                    <TextBlock x:Name="NormalStrengthLabel" Text="2" FontSize="10" Foreground="#666"/>
+                    <CheckBox x:Name="InvertNormalYCheck" Content="Invert Y (OpenGL)" Foreground="#AAA" FontSize="11" Checked="InvertNormalY_Changed" Unchecked="InvertNormalY_Changed"/>
+                    <Button x:Name="GenerateNormalBtn" Content="Generate Normal Map" Margin="0,8,0,0" Click="GenerateNormal_Click" IsEnabled="False"/>
+                    <Button x:Name="SaveNormalBtn" Content="Save Normal Map (PNG)" Margin="0,4,0,0" Click="SaveNormal_Click" IsEnabled="False"/>
+                    <Button x:Name="SaveAllBtn" Content="SAVE ALL MAPS" Background="#22C55E" Foreground="White" Margin="0,14,0,0" Padding="0,10" Click="SaveAll_Click" IsEnabled="False"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>
         <Border Grid.Column="1" Background="#09090B">
-            <Image x:Name="OutputImage" Stretch="Uniform"/>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Image x:Name="OutputImage" Grid.Row="0" Stretch="Uniform"/>
+                <Border Grid.Row="1" Background="#111114" BorderBrush="#222" BorderThickness="0,1,0,0">
+                    <StackPanel x:Name="MapStrip" Orientation="Horizontal" Margin="8">
+                        <Border x:Name="DepthThumbBorder" Width="90" Height="90" Margin="0,0,8,0" BorderBrush="#8B5CF6" BorderThickness="2" Cursor="Hand" MouseLeftButtonDown="DepthThumb_Click">
+                            <Grid>
+                                <Image x:Name="DepthThumb" Stretch="Uniform"/>
+                                <TextBlock Text="DEPTH" Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" TextAlignment="Center" Background="#AA000000"/>
+                            </Grid>
+                        </Border>
+                        <Border x:Name="NormalThumbBorder" Width="90" Height="90" Margin="0,0,8,0" BorderBrush="#333" BorderThickness="2" Cursor="Hand" Visibility="Collapsed" MouseLeftButtonDown="NormalThumb_Click">
+                            <Grid>
+                                <Image x:Name="NormalThumb" Stretch="Uniform"/>
+                                <TextBlock Text="NORMAL" Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" TextAlignment="Center" Background="#AA000000"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Border>
     </Grid>
 </Window>

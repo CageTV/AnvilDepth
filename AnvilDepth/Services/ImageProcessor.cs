@@ -379,4 +379,75 @@ public static class ImageProcessor
         Marshal.Copy(data, 0, mat.Data, data.Length);
         Cv2.ImWrite(path, mat);
     }
+
+    /// <summary>
+    /// Derives a tangent-space normal map directly from an already-generated depth/height map via
+    /// Sobel gradients. This is NOT a separate AI model — there's no ONNX network in this app that
+    /// outputs normals; Depth-Anything only estimates depth. Treating the depth field as a height
+    /// map, the surface gradient at each pixel gives a normal vector: N = normalize(-dx*strength,
+    /// -dy*strength, 1), encoded to RGB the standard way (each axis mapped from [-1,1] to [0,255]).
+    /// invertY flips the green channel — OpenGL-style engines (Unity, most game engines) expect Y+
+    /// pointing "up" the slope; DirectX-style engines (Unreal) expect the opposite.
+    /// </summary>
+    public static byte[] ComputeNormalMap(float[] depth, int width, int height, float strength, bool invertY)
+    {
+        using var src = new Mat(height, width, MatType.CV_32FC1);
+        Marshal.Copy(depth, 0, src.Data, depth.Length);
+
+        // Light blur before differentiating — raw per-pixel Sobel on noisy/quantized depth data
+        // produces a speckled normal map; a small blur trades a little fine detail for a much
+        // cleaner result, which is what you want for a bakeable normal map rather than raw noise.
+        using var smoothed = new Mat();
+        Cv2.GaussianBlur(src, smoothed, new OpenCvSharp.Size(0, 0), 1.0);
+
+        using var gx = new Mat();
+        using var gy = new Mat();
+        Cv2.Sobel(smoothed, gx, MatType.CV_32F, 1, 0, ksize: 3);
+        Cv2.Sobel(smoothed, gy, MatType.CV_32F, 0, 1, ksize: 3);
+
+        float ySign = invertY ? -1f : 1f;
+        var result = new byte[width * height * 4]; // BGRA, matches WriteableBitmap's Bgra32 format
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                float dx = gx.At<float>(y, x) * strength;
+                float dy = gy.At<float>(y, x) * strength * ySign;
+
+                float nx = -dx, ny = -dy, nz = 1f;
+                float len = MathF.Sqrt(nx * nx + ny * ny + nz * nz);
+                nx /= len; ny /= len; nz /= len;
+
+                int i = (y * width + x) * 4;
+                result[i + 0] = (byte)Math.Clamp((nz * 0.5f + 0.5f) * 255f, 0, 255); // B <- Z
+                result[i + 1] = (byte)Math.Clamp((ny * 0.5f + 0.5f) * 255f, 0, 255); // G <- Y
+                result[i + 2] = (byte)Math.Clamp((nx * 0.5f + 0.5f) * 255f, 0, 255); // R <- X
+                result[i + 3] = 255; // A
+            }
+        }
+        return result;
+    }
+
+    /// <summary>Wraps an already-BGRA byte array (e.g. from ComputeNormalMap) as a displayable
+    /// BitmapSource — simpler than FloatArrayToBitmapSource since there's no float->byte mapping
+    /// to do, just a direct pixel copy.</summary>
+    public static BitmapSource BgraArrayToBitmapSource(byte[] bgra, int width, int height)
+    {
+        var bmp = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
+        bmp.WritePixels(new Int32Rect(0, 0, width, height), bgra, width * 4, 0);
+        bmp.Freeze();
+        return bmp;
+    }
+
+    /// <summary>Saves a normal map as an 8-bit RGB PNG — the standard format normal maps are
+    /// consumed in (game engines, sculpting tools); alpha is dropped since it's unused here.</summary>
+    public static void SaveNormalMapPng(byte[] bgra, int width, int height, string path)
+    {
+        using var mat = new Mat(height, width, MatType.CV_8UC4);
+        Marshal.Copy(bgra, 0, mat.Data, bgra.Length);
+        using var bgr = new Mat();
+        Cv2.CvtColor(mat, bgr, ColorConversionCodes.BGRA2BGR);
+        Cv2.ImWrite(path, bgr);
+    }
 }
+

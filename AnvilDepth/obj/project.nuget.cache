@@ -1,16 +1,16 @@
 {
   "version": 2,
-  "dgSpecHash": "EJLLmspfzwA=",
+  "dgSpecHash": "Bb4V6Vj6iMA=",
   "success": true,
-  "projectFilePath": "C:\\Projects\\AnvilDepth_Auros\\AnvilDepth\\AnvilDepth.csproj",
+  "projectFilePath": "C:\\Modlists\\Texture Generator 3\\AnvilDepth - Normal\\AnvilDepth\\AnvilDepth.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.ai.directml\\1.15.2\\microsoft.ai.directml.1.15.2.nupkg.sha512",
-    "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.ml.onnxruntime.directml\\1.20.1\\microsoft.ml.onnxruntime.directml.1.20.1.nupkg.sha512",
-    "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.ml.onnxruntime.managed\\1.20.1\\microsoft.ml.onnxruntime.managed.1.20.1.nupkg.sha512",
-    "C:\\Users\\Administrator\\.nuget\\packages\\opencvsharp4\\4.10.0.20241107\\opencvsharp4.4.10.0.20241107.nupkg.sha512",
-    "C:\\Users\\Administrator\\.nuget\\packages\\opencvsharp4.runtime.win\\4.10.0.20241107\\opencvsharp4.runtime.win.4.10.0.20241107.nupkg.sha512",
-    "C:\\Users\\Administrator\\.nuget\\packages\\system.memory\\4.5.5\\system.memory.4.5.5.nupkg.sha512",
-    "C:\\Users\\Administrator\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\6.0.0\\system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512"
+    "C:\\Users\\JulioV\\.nuget\\packages\\microsoft.ai.directml\\1.15.2\\microsoft.ai.directml.1.15.2.nupkg.sha512",
+    "C:\\Users\\JulioV\\.nuget\\packages\\microsoft.ml.onnxruntime.directml\\1.20.1\\microsoft.ml.onnxruntime.directml.1.20.1.nupkg.sha512",
+    "C:\\Users\\JulioV\\.nuget\\packages\\microsoft.ml.onnxruntime.managed\\1.20.1\\microsoft.ml.onnxruntime.managed.1.20.1.nupkg.sha512",
+    "C:\\Users\\JulioV\\.nuget\\packages\\opencvsharp4\\4.10.0.20241107\\opencvsharp4.4.10.0.20241107.nupkg.sha512",
+    "C:\\Users\\JulioV\\.nuget\\packages\\opencvsharp4.runtime.win\\4.10.0.20241107\\opencvsharp4.runtime.win.4.10.0.20241107.nupkg.sha512",
+    "C:\\Users\\JulioV\\.nuget\\packages\\system.memory\\4.5.5\\system.memory.4.5.5.nupkg.sha512",
+    "C:\\Users\\JulioV\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\6.0.0\\system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512"
   ],
   "logs": []
 }
