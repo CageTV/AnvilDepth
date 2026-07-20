@@ -17,8 +17,13 @@
                         </Grid>
                     </Border>
                     <CheckBox x:Name="AiModelCheck" Content="Use AI" Foreground="White" Checked="Mode_Changed" Unchecked="Mode_Changed" Margin="0,8,0,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="18,4,0,0">
+                        <RadioButton x:Name="ModelSmallRadio" GroupName="ModelSize" Content="Small" IsChecked="True" Foreground="#AAA" FontSize="11" Margin="0,0,10,0" Checked="ModelSize_Changed"/>
+                        <RadioButton x:Name="ModelBaseRadio" GroupName="ModelSize" Content="Base" Foreground="#AAA" FontSize="11" Margin="0,0,10,0" Checked="ModelSize_Changed"/>
+                        <RadioButton x:Name="ModelLargeRadio" GroupName="ModelSize" Content="Large" Foreground="#AAA" FontSize="11" Checked="ModelSize_Changed"/>
+                    </StackPanel>
                     <TextBlock Text="1. LAB" Foreground="#8B5CF6" FontSize="10" Margin="0,8,0,2"/>
-                    <CheckBox x:Name="UseLabCheck" Content="LAB L channel" IsChecked="True" Foreground="#AAA" FontSize="11"/>
+                    <CheckBox x:Name="UseLabCheck" Content="LAB L channel" IsChecked="True" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
                     <TextBlock Text="2. DE-LIGHT" Foreground="#8B5CF6" FontSize="10" Margin="0,8,0,2"/>
                     <TextBlock Text="Flatten" Foreground="#AAA" FontSize="11"/>
                     <Slider x:Name="FlattenSlider" Minimum="0" Maximum="1" Value="0.35" ValueChanged="Slider_ValueChanged"/>
@@ -43,7 +48,7 @@
                     <TextBlock Text="Gamma" Foreground="#AAA" FontSize="11"/>
                     <Slider x:Name="GammaSlider" Minimum="0.2" Maximum="3" Value="1" ValueChanged="Slider_ValueChanged"/>
                     <TextBlock x:Name="GammaLabel" Text="1" FontSize="10" Foreground="#666"/>
-                    <CheckBox x:Name="PercentileCheck" Content="2%-98% percentile" IsChecked="True" Foreground="#AAA" FontSize="11"/>
+                    <CheckBox x:Name="PercentileCheck" Content="2%-98% percentile" IsChecked="True" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
                     <TextBlock Text="Shadows" Foreground="#AAA" FontSize="11"/>
                     <Slider x:Name="ShadowsSlider" Minimum="0.2" Maximum="2.5" Value="1" ValueChanged="Slider_ValueChanged"/>
                     <TextBlock x:Name="ShadowsLabel" Text="1" FontSize="10" Foreground="#666"/>
@@ -54,17 +59,17 @@
                     <Slider x:Name="HighlightsSlider" Minimum="0.2" Maximum="2.5" Value="1" ValueChanged="Slider_ValueChanged"/>
                     <TextBlock x:Name="HighlightsLabel" Text="1" FontSize="10" Foreground="#666"/>
                     <TextBlock Text="5. SEAMLESS" Foreground="#8B5CF6" FontSize="10" Margin="0,8,0,2"/>
-                    <CheckBox x:Name="SeamlessCheck" Content="Make Seamless 50%" IsChecked="False" Foreground="#AAA" FontSize="11"/>
+                    <CheckBox x:Name="SeamlessCheck" Content="Make Seamless 50%" IsChecked="False" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
                     <Slider x:Name="SeamBlendSlider" Minimum="0" Maximum="1" Value="0.3" ValueChanged="Slider_ValueChanged"/>
                     <TextBlock x:Name="SeamBlendLabel" Text="0.3" FontSize="10" Foreground="#666"/>
                     <TextBlock Text="6. ZERO" Foreground="#8B5CF6" FontSize="10" Margin="0,8,0,2"/>
-                    <CheckBox x:Name="ZeroMidGrayCheck" Content="Zero Mid-Gray 0.5" IsChecked="False" Foreground="#AAA" FontSize="11"/>
+                    <CheckBox x:Name="ZeroMidGrayCheck" Content="Zero Mid-Gray 0.5" IsChecked="False" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
                     <Slider x:Name="ZeroLevelSlider" Minimum="-0.5" Maximum="0.5" Value="0" ValueChanged="Slider_ValueChanged"/>
                     <TextBlock x:Name="ZeroLevelLabel" Text="0" FontSize="10" Foreground="#666"/>
                     <Slider x:Name="StrengthSlider" Minimum="0.2" Maximum="2.5" Value="1" ValueChanged="Slider_ValueChanged"/>
                     <TextBlock x:Name="StrengthLabel" Text="1" FontSize="10" Foreground="#666"/>
-                    <CheckBox x:Name="InvertCheck" Content="Invert" Foreground="#AAA" FontSize="11"/>
-                    <CheckBox x:Name="RemoveBgCheck" Content="Remove BG" IsChecked="True" Foreground="#AAA" FontSize="11"/>
+                    <CheckBox x:Name="InvertCheck" Content="Invert" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
+                    <CheckBox x:Name="RemoveBgCheck" Content="Remove BG" IsChecked="True" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
                     <CheckBox x:Name="HighQualityCheck" Content="HQ Tiled" Foreground="#AAA" FontSize="11"/>
                     <Button x:Name="GenerateBtn" Content="GENERATE" Background="#8B5CF6" Foreground="White" Margin="0,12,0,0" Padding="0,12" Click="Generate_Click" IsEnabled="False"/>
                     <Button x:Name="SavePngBtn" Content="Save 16-bit PNG" Margin="0,6,0,0" Click="SavePng_Click" IsEnabled="False"/>

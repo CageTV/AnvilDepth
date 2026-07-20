@@ -15,28 +15,47 @@ public sealed record DepthResult(float[] Depth, int Width, int Height);
 /// <summary>
 /// Runs Depth-Anything V2 (local ONNX, offline) to produce a relative depth map.
 ///
-/// "HQ Tiled" is implemented literally: the model's native input is a fixed 518x518,
-/// so a single global pass on a large texture atlas (e.g. 2048x2048) throws away most
-/// detail. When HighQuality is on, the source is additionally split into overlapping
-/// tiles that are each run through the model near-native-resolution, feathered back
-/// together, and blended as a *local* detail layer on top of the coherent global pass
+/// "HQ Tiled" is implemented literally: the model's native input resolution (518x518 for
+/// the standard Small/Base/Large exports, or whatever InitializeAsync detects for others)
+/// is far smaller than a large texture atlas (e.g. 2048x2048), so a single global pass
+/// throws away most detail. When HighQuality is on, the source is additionally split into
+/// overlapping tiles that are each run through the model near-native-resolution, feathered
+/// back together, and blended as a *local* detail layer on top of the coherent global pass
 /// (so tile seams don't show up as large-scale depth drift).
 /// </summary>
 public sealed class DepthEngine : IDisposable
 {
-    private const int NetSize = 518;
+    // Default net size for models with dynamic (unconstrained) input dims — this is what
+    // Depth-Anything V2 Small/Base/Large are normally exported as. If a given model.onnx
+    // instead has a *fixed* input shape baked in (some third-party re-exports do this),
+    // InitializeAsync overrides this from the model's own metadata so tiling/resizing
+    // always matches what the model actually expects instead of assuming 518.
+    private const int DefaultNetSize = 518;
     private static readonly float[] Mean = { 0.485f, 0.456f, 0.406f };
     private static readonly float[] Std = { 0.229f, 0.224f, 0.225f };
 
     private InferenceSession? _session;
+    private int _netW = DefaultNetSize;
+    private int _netH = DefaultNetSize;
 
-    public Task<string> InitializeAsync()
+    /// <summary>Loads Models\model.onnx (the default/Small model) at startup — kept for backward compatibility
+    /// with existing installs that only have a single model.onnx.</summary>
+    public Task<string> InitializeAsync() => LoadModelAsync("model.onnx");
+
+    /// <summary>
+    /// Loads (or swaps to) a specific model file from the Models folder, e.g. "model.onnx" (Small),
+    /// "model_base.onnx", or "model_large.onnx". Safe to call after a model is already loaded —
+    /// the new session only replaces the old one on success, so a failed swap (missing file,
+    /// incompatible export) leaves the previously working model active instead of leaving the
+    /// engine in a broken state.
+    /// </summary>
+    public Task<string> LoadModelAsync(string modelFileName)
     {
         return Task.Run(() =>
         {
-            string modelPath = Path.Combine(AppContext.BaseDirectory, "Models", "model.onnx");
+            string modelPath = Path.Combine(AppContext.BaseDirectory, "Models", modelFileName);
             if (!File.Exists(modelPath))
-                return "AI model not found (Models\\model.onnx) — Relief mode still works. See README.";
+                return $"Model not found: Models\\{modelFileName}";
 
             var options = new SessionOptions();
             bool gpu = false;
@@ -52,12 +71,33 @@ public sealed class DepthEngine : IDisposable
 
             try
             {
-                _session = new InferenceSession(modelPath, options);
-                return gpu ? "AI Ready (GPU/DirectML)" : "AI Ready (CPU)";
+                var newSession = new InferenceSession(modelPath, options);
+
+                // Depth-Anything V2 models normally export with dynamic height/width (dim -1),
+                // in which case we keep DefaultNetSize. But if this particular .onnx has a fixed
+                // shape baked in (dim > 0), honor it — otherwise Run() would throw a shape
+                // mismatch the first time a differently-sized model (e.g. a Base/Large variant
+                // exported without dynamic axes) gets loaded.
+                int netH = DefaultNetSize, netW = DefaultNetSize;
+                var inputDims = newSession.InputMetadata.Values.First().Dimensions;
+                if (inputDims.Length == 4)
+                {
+                    if (inputDims[2] > 0) netH = inputDims[2];
+                    if (inputDims[3] > 0) netW = inputDims[3];
+                }
+
+                // Only swap over now that the new session loaded successfully — old model
+                // stays active if anything above throws.
+                _session?.Dispose();
+                _session = newSession;
+                _netH = netH;
+                _netW = netW;
+
+                return gpu ? $"AI Ready — {modelFileName} (GPU/DirectML)" : $"AI Ready — {modelFileName} (CPU)";
             }
             catch (Exception ex)
             {
-                return $"AI init failed: {ex.Message}";
+                return $"Failed to load {modelFileName}: {ex.Message}";
             }
         });
     }
@@ -75,7 +115,19 @@ public sealed class DepthEngine : IDisposable
 
             int outW = src.Width, outH = src.Height;
 
-            using var globalDepth = RunSingleTile(src, new Rect(0, 0, src.Width, src.Height));
+            Mat globalDepth;
+            try
+            {
+                globalDepth = RunSingleTile(src, new Rect(0, 0, src.Width, src.Height));
+            }
+            catch (OnnxRuntimeException ex)
+            {
+                throw new InvalidOperationException(
+                    $"The loaded model (Models\\model.onnx) rejected the input it was given ({_netW}x{_netH}, 3-channel). " +
+                    $"This usually means it's a different Depth-Anything V2 export than expected (wrong input layout, " +
+                    $"or a fixed shape that doesn't match {_netW}x{_netH}). Original error: {ex.Message}", ex);
+            }
+            using var _globalDepthDisposeGuard = globalDepth;
             using var globalFullRes = new Mat();
             Cv2.Resize(globalDepth, globalFullRes, new OpenCvSharp.Size(outW, outH), 0, 0, InterpolationFlags.Cubic);
 
@@ -107,19 +159,19 @@ public sealed class DepthEngine : IDisposable
         });
     }
 
-    /// <summary>Runs one region of the source image through the model, returns a NetSize x NetSize depth Mat (0..1, white = near).</summary>
+    /// <summary>Runs one region of the source image through the model, returns a depth Mat sized to whatever the model outputs (0..1, white = near).</summary>
     private Mat RunSingleTile(Mat src, Rect region)
     {
         using var cropped = new Mat(src, region);
         using var resized = new Mat();
-        Cv2.Resize(cropped, resized, new OpenCvSharp.Size(NetSize, NetSize), 0, 0, InterpolationFlags.Cubic);
+        Cv2.Resize(cropped, resized, new OpenCvSharp.Size(_netW, _netH), 0, 0, InterpolationFlags.Cubic);
         using var rgb = new Mat();
         Cv2.CvtColor(resized, rgb, ColorConversionCodes.BGR2RGB);
 
-        var input = new DenseTensor<float>(new[] { 1, 3, NetSize, NetSize });
-        for (int y = 0; y < NetSize; y++)
+        var input = new DenseTensor<float>(new[] { 1, 3, _netH, _netW });
+        for (int y = 0; y < _netH; y++)
         {
-            for (int x = 0; x < NetSize; x++)
+            for (int x = 0; x < _netW; x++)
             {
                 var px = rgb.At<Vec3b>(y, x);
                 input[0, 0, y, x] = (px.Item0 / 255f - Mean[0]) / Std[0];
@@ -134,7 +186,17 @@ public sealed class DepthEngine : IDisposable
         };
 
         using var results = _session.Run(inputs);
-        var outTensor = results.First().AsTensor<float>();
+
+        // Some Depth-Anything V2 exports (esp. third-party Base/Large conversions) emit more
+        // than one output — e.g. intermediate features alongside the depth map. Prefer an
+        // output literally named "predicted_depth" (the standard HF export name); otherwise
+        // fall back to the highest-rank tensor, since a depth map is rank-3/4 while auxiliary
+        // outputs are often lower-rank; only if that's still ambiguous do we take the first.
+        var depthResult =
+            results.FirstOrDefault(r => r.Name.Equals("predicted_depth", StringComparison.OrdinalIgnoreCase))
+            ?? results.OrderByDescending(r => r.AsTensor<float>().Dimensions.Length).First();
+
+        var outTensor = depthResult.AsTensor<float>();
         var dims = outTensor.Dimensions;
         int h = dims.Length == 4 ? dims[2] : dims[1];
         int w = dims.Length == 4 ? dims[3] : dims[2];
