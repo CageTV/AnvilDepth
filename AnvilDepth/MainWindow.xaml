@@ -1,92 +1,86 @@
-<Window x:Class="AnvilDepth.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="AnvilDepth V7.20 Checklist" Height="980" Width="1340" Background="#0A0A0A" AllowDrop="True" DragEnter="Window_DragEnter" DragOver="Window_DragOver" Drop="Window_Drop">
+<Window x:Class="AnvilDepth.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="AnvilDepth V7.20 Checklist" Height="980" Width="1560" Background="#0A0A0A" AllowDrop="True" DragEnter="Window_DragEnter" DragOver="Window_DragOver" Drop="Window_Drop">
     <Grid Background="#0A0A0A">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="390"/>
             <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="200"/>
         </Grid.ColumnDefinitions>
         <Border Grid.Column="0" Background="#18181B" Padding="12">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                    <TextBlock x:Name="DragDebugText" Text="" Foreground="#F59E0B" FontSize="10"/>
-                    <Border x:Name="DropZone" Height="104" Background="#1F1F23" CornerRadius="8" AllowDrop="True" DragEnter="DropZone_DragEnter" DragOver="DropZone_DragOver" Drop="DropZone_Drop" MouseDown="DropZone_MouseDown">
+                <StackPanel x:Name="SidebarPanel">
+                    <TextBlock x:Name="DragDebugText" Text="" Foreground="#F59E0B" FontSize="12"/>
+                    <Border x:Name="DropZone" Height="170" Background="#1F1F23" CornerRadius="8" AllowDrop="True" ClipToBounds="True" DragEnter="DropZone_DragEnter" DragOver="DropZone_DragOver" Drop="DropZone_Drop" MouseDown="DropZone_MouseDown">
                         <Grid>
-                            <TextBlock x:Name="DropText" Foreground="#FFA75B64" HorizontalAlignment="Center" VerticalAlignment="Center" Height="100" Width="263" TextAlignment="Center" FontSize="16" FontWeight="Bold">
-                                <TextBlock.Background>
-                                    <ImageBrush ImageSource="/Assets/anvildepth_rtx_logo.jpg" Opacity="0.1"/>
-                                </TextBlock.Background><Run/><LineBreak/><Run/><LineBreak/><Run Text="Drop PNG/JPG"/></TextBlock>
+                            <Image Source="Assets/anvildepth_rtx_logo.jpg" Opacity="0.35" Stretch="Uniform" Margin="10" IsHitTestVisible="False"/>
+                            <TextBlock x:Name="DropText" Text="Drop PNG/JPG" Foreground="#F87171" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/>
                             <Image x:Name="InputPreview" Visibility="Collapsed" IsHitTestVisible="False"/>
                         </Grid>
                     </Border>
-                    <TextBlock x:Name="GpuStatusText" Text="Ready" Foreground="#22C55E" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="GpuStatusText" Text="Ready" Foreground="#22C55E" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <Button x:Name="ResetBtn" Content="Reset" Margin="0,0,4,0" Padding="8,2" Click="Reset_Click"/>
+                        <Button x:Name="SavePresetBtn" Content="Save Preset" Margin="0,0,4,0" Padding="8,2" Click="SavePreset_Click"/>
+                        <Button x:Name="LoadPresetBtn" Content="Load Preset" Padding="8,2" Click="LoadPreset_Click"/>
+                    </StackPanel>
+                    <CheckBox x:Name="LargeTextCheck" Content="Large Text" Foreground="#AAA" FontSize="13" Margin="0,8,0,0" Checked="LargeText_Changed" Unchecked="LargeText_Changed"/>
                     <CheckBox x:Name="AiModelCheck" Content="Use AI" Foreground="White" Checked="Mode_Changed" Unchecked="Mode_Changed" Margin="0,8,0,0"/>
                     <StackPanel Orientation="Horizontal" Margin="18,4,0,0">
-                        <RadioButton x:Name="ModelSmallRadio" GroupName="ModelSize" Content="Small" IsChecked="True" Foreground="#AAA" FontSize="11" Margin="0,0,10,0" Checked="ModelSize_Changed"/>
-                        <RadioButton x:Name="ModelBaseRadio" GroupName="ModelSize" Content="Base" Foreground="#AAA" FontSize="11" Margin="0,0,10,0" Checked="ModelSize_Changed"/>
-                        <RadioButton x:Name="ModelLargeRadio" GroupName="ModelSize" Content="Large" Foreground="#AAA" FontSize="11" Checked="ModelSize_Changed"/>
+                        <RadioButton x:Name="ModelSmallRadio" GroupName="ModelSize" Content="Small" IsChecked="True" Foreground="#AAA" FontSize="13" Margin="0,0,8,0" Checked="ModelSize_Changed"/>
+                        <RadioButton x:Name="ModelBaseRadio" GroupName="ModelSize" Content="Base" Foreground="#AAA" FontSize="13" Margin="0,0,8,0" Checked="ModelSize_Changed"/>
+                        <RadioButton x:Name="ModelLargeRadio" GroupName="ModelSize" Content="Large" Foreground="#AAA" FontSize="13" Margin="0,0,8,0" Checked="ModelSize_Changed"/>
+                        <RadioButton x:Name="ModelProRadio" GroupName="ModelSize" Content="Pro" Foreground="#AAA" FontSize="13" Checked="ModelSize_Changed"/>
                     </StackPanel>
-                    <TextBlock Text="1. LAB" Foreground="#8B5CF6" FontSize="10" Margin="0,8,0,2"/>
-                    <CheckBox x:Name="UseLabCheck" Content="LAB L channel" IsChecked="True" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
-                    <TextBlock Text="2. DE-LIGHT" Foreground="#8B5CF6" FontSize="10" Margin="0,8,0,2"/>
-                    <TextBlock Text="Flatten" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock Text="1. LAB" Foreground="#8B5CF6" FontSize="12" Margin="0,8,0,2"/>
+                    <CheckBox x:Name="UseLabCheck" Content="LAB L channel" IsChecked="True" Foreground="#AAA" FontSize="13" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
+                    <TextBlock Text="2. DE-LIGHT" Foreground="#8B5CF6" FontSize="12" Margin="0,8,0,2"/>
+                    <TextBlock Text="Flatten" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="FlattenSlider" Minimum="0" Maximum="1" Value="0.35" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="FlattenLabel" Text="0.35" FontSize="10" Foreground="#666"/>
-                    <TextBlock Text="Radius" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="FlattenLabel" Text="0.35" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="Radius" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="FlattenRadiusSlider" Minimum="5" Maximum="100" Value="40" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="FlattenRadiusLabel" Text="40" FontSize="10" Foreground="#666"/>
-                    <TextBlock Text="3. FREQ" Foreground="#8B5CF6" FontSize="10" Margin="0,8,0,2"/>
-                    <TextBlock Text="Low" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="FlattenRadiusLabel" Text="40" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="3. FREQ" Foreground="#8B5CF6" FontSize="12" Margin="0,8,0,2"/>
+                    <TextBlock Text="Low" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="LowFreqSlider" Minimum="0" Maximum="2" Value="1" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="LowFreqLabel" Text="1" FontSize="10" Foreground="#666"/>
-                    <TextBlock Text="Mid" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="LowFreqLabel" Text="1" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="Mid" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="MidFreqSlider" Minimum="0" Maximum="2" Value="1" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="MidFreqLabel" Text="1" FontSize="10" Foreground="#666"/>
-                    <TextBlock Text="High" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="MidFreqLabel" Text="1" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="High" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="HighFreqSlider" Minimum="0" Maximum="3" Value="1" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="HighFreqLabel" Text="1" FontSize="10" Foreground="#666"/>
-                    <TextBlock Text="Detail" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="HighFreqLabel" Text="1" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="Detail" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="DetailSlider" Minimum="0" Maximum="1" Value="0.85" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="DetailLabel" Text="0.85" FontSize="10" Foreground="#666"/>
-                    <TextBlock Text="4. TONE" Foreground="#8B5CF6" FontSize="10" Margin="0,8,0,2"/>
-                    <TextBlock Text="Gamma" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="DetailLabel" Text="0.85" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="4. TONE" Foreground="#8B5CF6" FontSize="12" Margin="0,8,0,2"/>
+                    <TextBlock Text="Gamma" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="GammaSlider" Minimum="0.2" Maximum="3" Value="1" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="GammaLabel" Text="1" FontSize="10" Foreground="#666"/>
-                    <CheckBox x:Name="PercentileCheck" Content="2%-98% percentile" IsChecked="True" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
-                    <TextBlock Text="Shadows" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="GammaLabel" Text="1" FontSize="12" Foreground="#666"/>
+                    <CheckBox x:Name="PercentileCheck" Content="2%-98% percentile" IsChecked="True" Foreground="#AAA" FontSize="13" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
+                    <TextBlock Text="Shadows" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="ShadowsSlider" Minimum="0.2" Maximum="2.5" Value="1" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="ShadowsLabel" Text="1" FontSize="10" Foreground="#666"/>
-                    <TextBlock Text="Midtones" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="ShadowsLabel" Text="1" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="Midtones" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="MidtonesSlider" Minimum="0.2" Maximum="2.5" Value="1" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="MidtonesLabel" Text="1" FontSize="10" Foreground="#666"/>
-                    <TextBlock Text="Highlights" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="MidtonesLabel" Text="1" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="Highlights" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="HighlightsSlider" Minimum="0.2" Maximum="2.5" Value="1" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="HighlightsLabel" Text="1" FontSize="10" Foreground="#666"/>
-                    <TextBlock Text="5. SEAMLESS" Foreground="#8B5CF6" FontSize="10" Margin="0,8,0,2"/>
-                    <CheckBox x:Name="SeamlessCheck" Content="Make Seamless 50%" IsChecked="False" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
+                    <TextBlock x:Name="HighlightsLabel" Text="1" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="5. SEAMLESS" Foreground="#8B5CF6" FontSize="12" Margin="0,8,0,2"/>
+                    <CheckBox x:Name="SeamlessCheck" Content="Make Seamless 50%" IsChecked="False" Foreground="#AAA" FontSize="13" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
                     <Slider x:Name="SeamBlendSlider" Minimum="0" Maximum="1" Value="0.3" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="SeamBlendLabel" Text="0.3" FontSize="10" Foreground="#666"/>
-                    <TextBlock Text="6. ZERO" Foreground="#8B5CF6" FontSize="10" Margin="0,8,0,2"/>
-                    <CheckBox x:Name="ZeroMidGrayCheck" Content="Zero Mid-Gray 0.5" IsChecked="False" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
+                    <TextBlock x:Name="SeamBlendLabel" Text="0.3" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="6. ZERO" Foreground="#8B5CF6" FontSize="12" Margin="0,8,0,2"/>
+                    <CheckBox x:Name="ZeroMidGrayCheck" Content="Zero Mid-Gray 0.5" IsChecked="False" Foreground="#AAA" FontSize="13" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
                     <Slider x:Name="ZeroLevelSlider" Minimum="-0.5" Maximum="0.5" Value="0" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="ZeroLevelLabel" Text="0" FontSize="10" Foreground="#666"/>
+                    <TextBlock x:Name="ZeroLevelLabel" Text="0" FontSize="12" Foreground="#666"/>
                     <Slider x:Name="StrengthSlider" Minimum="0.2" Maximum="2.5" Value="1" ValueChanged="Slider_ValueChanged"/>
-                    <TextBlock x:Name="StrengthLabel" Text="1" FontSize="10" Foreground="#666"/>
-                    <CheckBox x:Name="InvertCheck" Content="Invert" Foreground="#AAA" FontSize="11" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
-                    <CheckBox x:Name="RemoveBgCheck" Content="Remove BG" IsChecked="True" Foreground="#AAA" FontSize="11" Checked="RemoveBg_Changed" Unchecked="RemoveBg_Changed"/>
-                    <CheckBox x:Name="HighQualityCheck" Content="HQ Tiled" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="StrengthLabel" Text="1" FontSize="12" Foreground="#666"/>
+                    <CheckBox x:Name="InvertCheck" Content="Invert" Foreground="#AAA" FontSize="13" Checked="Toggle_Changed" Unchecked="Toggle_Changed"/>
+                    <CheckBox x:Name="RemoveBgCheck" Content="Remove BG" IsChecked="True" Foreground="#AAA" FontSize="13" Checked="RemoveBg_Changed" Unchecked="RemoveBg_Changed"/>
+                    <CheckBox x:Name="AutoCropCheck" Content="Auto-Crop to Subject" Foreground="#AAA" FontSize="13" Margin="18,0,0,0" Checked="AutoCrop_Changed" Unchecked="AutoCrop_Changed"/>
+                    <CheckBox x:Name="HighQualityCheck" Content="HQ Tiled" Foreground="#AAA" FontSize="13"/>
                     <Button x:Name="GenerateBtn" Content="GENERATE" Background="#8B5CF6" Foreground="White" Margin="0,12,0,0" Padding="0,12" Click="Generate_Click" IsEnabled="False"/>
-                    <Button x:Name="SavePngBtn" Content="Save 16-bit PNG" Margin="0,6,0,0" Click="SavePng_Click" IsEnabled="False"/>
-                    <Button x:Name="SaveExrBtn" Content="Save 32-bit EXR" Margin="0,4,0,0" Click="SaveExr_Click" IsEnabled="False"/>
-                    <Button x:Name="SaveTiffBtn" Content="Save 32-bit TIFF" Margin="0,4,0,0" Click="SaveTiffBtn_Click" IsEnabled="False"/>
-                    <Button x:Name="SaveStlBtn" Content="Save STL" Margin="0,4,0,0" Click="SaveStl_Click" IsEnabled="False"/>
-                    <TextBlock Text="7. NORMAL MAP" Foreground="#8B5CF6" FontSize="10" Margin="0,14,0,2"/>
-                    <TextBlock Text="Derived from the depth map above — not a separate AI model." Foreground="#555" FontSize="9" TextWrapping="Wrap" Margin="0,0,0,4"/>
-                    <TextBlock Text="Strength" Foreground="#AAA" FontSize="11"/>
-                    <Slider x:Name="NormalStrengthSlider" Minimum="0.1" Maximum="10" Value="2" ValueChanged="NormalStrengthSlider_ValueChanged"/>
-                    <TextBlock x:Name="NormalStrengthLabel" Text="2" FontSize="10" Foreground="#666"/>
-                    <CheckBox x:Name="InvertNormalYCheck" Content="Invert Y (OpenGL)" Foreground="#AAA" FontSize="11" Checked="InvertNormalY_Changed" Unchecked="InvertNormalY_Changed"/>
-                    <Button x:Name="GenerateNormalBtn" Content="Generate Normal Map" Margin="0,8,0,0" Click="GenerateNormal_Click" IsEnabled="False"/>
-                    <Button x:Name="SaveNormalBtn" Content="Save Normal Map (PNG)" Margin="0,4,0,0" Click="SaveNormal_Click" IsEnabled="False"/>
-                    <Button x:Name="SaveAllBtn" Content="SAVE ALL MAPS" Background="#22C55E" Foreground="White" Margin="0,14,0,0" Padding="0,10" Click="SaveAll_Click" IsEnabled="False"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>
@@ -96,24 +90,104 @@
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <Image x:Name="OutputImage" Grid.Row="0" Stretch="Uniform"/>
+                <Grid Grid.Row="0">
+                    <Image x:Name="OutputImage" Stretch="Uniform"/>
+                    <Viewport3D x:Name="PreviewViewport" Visibility="Collapsed" ClipToBounds="True" MouseLeftButtonDown="Viewport_MouseDown" MouseLeftButtonUp="Viewport_MouseUp" MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel">
+                        <Viewport3D.Camera>
+                            <PerspectiveCamera x:Name="PreviewCamera" Position="0,150,300" LookDirection="0,-0.4,-1" UpDirection="0,1,0" FieldOfView="45"/>
+                        </Viewport3D.Camera>
+                        <ModelVisual3D>
+                            <ModelVisual3D.Content>
+                                <Model3DGroup>
+                                    <AmbientLight Color="#808080"/>
+                                    <DirectionalLight Color="#AAAAAA" Direction="-0.5,-0.7,-0.3"/>
+                                    <GeometryModel3D x:Name="PreviewMeshModel">
+                                        <GeometryModel3D.Material>
+                                            <DiffuseMaterial x:Name="PreviewMeshMaterial" Brush="#888888"/>
+                                        </GeometryModel3D.Material>
+                                        <GeometryModel3D.BackMaterial>
+                                            <DiffuseMaterial x:Name="PreviewMeshBackMaterial" Brush="#888888"/>
+                                        </GeometryModel3D.BackMaterial>
+                                    </GeometryModel3D>
+                                </Model3DGroup>
+                            </ModelVisual3D.Content>
+                        </ModelVisual3D>
+                    </Viewport3D>
+                    <TextBlock Text="Drag to rotate · scroll to zoom" Foreground="#666" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6" IsHitTestVisible="False" Visibility="{Binding Visibility, ElementName=PreviewViewport}"/>
+                </Grid>
                 <Border Grid.Row="1" Background="#111114" BorderBrush="#222" BorderThickness="0,1,0,0">
-                    <StackPanel x:Name="MapStrip" Orientation="Horizontal" Margin="8">
+                    <StackPanel Orientation="Horizontal" Margin="8">
                         <Border x:Name="DepthThumbBorder" Width="90" Height="90" Margin="0,0,8,0" BorderBrush="#8B5CF6" BorderThickness="2" Cursor="Hand" MouseLeftButtonDown="DepthThumb_Click">
                             <Grid>
                                 <Image x:Name="DepthThumb" Stretch="Uniform"/>
-                                <TextBlock Text="DEPTH" Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" TextAlignment="Center" Background="#AA000000"/>
+                                <TextBlock Text="DEPTH" Foreground="White" FontSize="11" FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" TextAlignment="Center" Background="#AA000000"/>
                             </Grid>
                         </Border>
                         <Border x:Name="NormalThumbBorder" Width="90" Height="90" Margin="0,0,8,0" BorderBrush="#333" BorderThickness="2" Cursor="Hand" Visibility="Collapsed" MouseLeftButtonDown="NormalThumb_Click">
                             <Grid>
                                 <Image x:Name="NormalThumb" Stretch="Uniform"/>
-                                <TextBlock Text="NORMAL" Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" TextAlignment="Center" Background="#AA000000"/>
+                                <TextBlock Text="NORMAL" Foreground="White" FontSize="11" FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" TextAlignment="Center" Background="#AA000000"/>
                             </Grid>
                         </Border>
+                        <Border x:Name="AOThumbBorder" Width="90" Height="90" Margin="0,0,8,0" BorderBrush="#333" BorderThickness="2" Cursor="Hand" Visibility="Collapsed" MouseLeftButtonDown="AOThumb_Click">
+                            <Grid>
+                                <Image x:Name="AOThumb" Stretch="Uniform"/>
+                                <TextBlock Text="AO" Foreground="White" FontSize="11" FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" TextAlignment="Center" Background="#AA000000"/>
+                            </Grid>
+                        </Border>
+                        <Border x:Name="ThreeDTileBorder" Width="90" Height="90" Margin="0,0,8,0" BorderBrush="#333" BorderThickness="2" Cursor="Hand" Background="#1A1A1E" MouseLeftButtonDown="ThreeDTile_Click">
+                            <TextBlock Text="3D&#x0a;PREVIEW" Foreground="White" FontSize="13" FontWeight="Bold" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <CheckBox x:Name="TilePreviewCheck" Content="Show Tiled 2x2" Foreground="#AAA" FontSize="13" VerticalAlignment="Center" Margin="16,0,0,0" Checked="TilePreview_Changed" Unchecked="TilePreview_Changed"/>
+                        <Button x:Name="OpenPresetsFolderBtn" Content="Open Presets Folder" VerticalAlignment="Center" Margin="16,0,0,0" Padding="8,3" Click="OpenPresetsFolder_Click"/>
                     </StackPanel>
                 </Border>
             </Grid>
+        </Border>
+        <Border Grid.Column="2" Background="#151517" BorderBrush="#222" BorderThickness="1,0,0,0" Padding="10">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Text="7. NORMAL MAP" Foreground="#8B5CF6" FontSize="12" Margin="0,0,0,2"/>
+                    <TextBlock Text="Derived from the depth map above — not a separate AI model." Foreground="#555" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                    <TextBlock Text="Strength" Foreground="#AAA" FontSize="13"/>
+                    <Slider x:Name="NormalStrengthSlider" Minimum="0.1" Maximum="10" Value="2" ValueChanged="NormalStrengthSlider_ValueChanged"/>
+                    <TextBlock x:Name="NormalStrengthLabel" Text="2" FontSize="12" Foreground="#666"/>
+                    <CheckBox x:Name="InvertNormalYCheck" Content="Invert Y (OpenGL)" Foreground="#AAA" FontSize="13" Checked="InvertNormalY_Changed" Unchecked="InvertNormalY_Changed"/>
+                    <CheckBox x:Name="EdgePreserveSmoothCheck" Content="Edge-Preserving Smooth" Foreground="#AAA" FontSize="13" Checked="InvertNormalY_Changed" Unchecked="InvertNormalY_Changed"/>
+                    <Button x:Name="GenerateNormalBtn" Content="Generate Normal Map" Margin="0,8,0,0" Click="GenerateNormal_Click" IsEnabled="False"/>
+                    <Button x:Name="SaveNormalBtn" Content="Save Normal Map (PNG)" Margin="0,4,0,0" Click="SaveNormal_Click" IsEnabled="False"/>
+                    <TextBlock Text="8. CAVITY / AO MAP" Foreground="#8B5CF6" FontSize="12" Margin="0,14,0,2"/>
+                    <TextBlock Text="Also derived from the depth map — a cheap approximation, not a physically-based render." Foreground="#555" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                    <TextBlock Text="Strength" Foreground="#AAA" FontSize="13"/>
+                    <Slider x:Name="AOStrengthSlider" Minimum="0.5" Maximum="10" Value="3" ValueChanged="AOStrengthSlider_ValueChanged"/>
+                    <TextBlock x:Name="AOStrengthLabel" Text="3" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="Blur Radius" Foreground="#AAA" FontSize="13"/>
+                    <Slider x:Name="AOBlurSlider" Minimum="2" Maximum="40" Value="12" ValueChanged="AOBlurSlider_ValueChanged"/>
+                    <TextBlock x:Name="AOBlurLabel" Text="12" FontSize="12" Foreground="#666"/>
+                    <Button x:Name="GenerateAOBtn" Content="Generate AO Map" Margin="0,8,0,0" Click="GenerateAO_Click" IsEnabled="False"/>
+                    <Button x:Name="SaveAOBtn" Content="Save AO Map (PNG)" Margin="0,4,0,0" Click="SaveAO_Click" IsEnabled="False"/>
+                    <TextBlock Text="QUICK PRESETS" Foreground="#8B5CF6" FontSize="12" Margin="0,16,0,4"/>
+                    <CheckBox x:Name="PresetSaveModeCheck" Content="Save Mode" Foreground="#AAA" FontSize="13" Margin="0,0,0,6" ToolTip="On: clicking a slot below SAVES current settings into it. Off: clicking LOADS it."/>
+                    <Button x:Name="PresetSlot1Btn" Content="Preset 1 (empty)" Tag="1" Margin="0,2,0,0" Click="PresetSlot_Click"/>
+                    <Button x:Name="PresetSlot2Btn" Content="Preset 2 (empty)" Tag="2" Margin="0,2,0,0" Click="PresetSlot_Click"/>
+                    <Button x:Name="PresetSlot3Btn" Content="Preset 3 (empty)" Tag="3" Margin="0,2,0,0" Click="PresetSlot_Click"/>
+                    <Button x:Name="PresetSlot4Btn" Content="Preset 4 (empty)" Tag="4" Margin="0,2,0,0" Click="PresetSlot_Click"/>
+                    <Button x:Name="PresetSlot5Btn" Content="Preset 5 (empty)" Tag="5" Margin="0,2,0,0" Click="PresetSlot_Click"/>
+                    <Button x:Name="PresetSlot6Btn" Content="Preset 6 (empty)" Tag="6" Margin="0,2,0,0" Click="PresetSlot_Click"/>
+                    <Button x:Name="PresetSlot7Btn" Content="Preset 7 (empty)" Tag="7" Margin="0,2,0,0" Click="PresetSlot_Click"/>
+                    <TextBlock Text="EXPORT" Foreground="#8B5CF6" FontSize="12" Margin="0,16,0,4"/>
+                    <Button x:Name="Save8PngBtn" Content="Save 8-bit PNG" Margin="0,2,0,0" Click="Save8Png_Click" IsEnabled="False"/>
+                    <Button x:Name="SavePngBtn" Content="Save 16-bit PNG" Margin="0,2,0,0" Click="SavePng_Click" IsEnabled="False"/>
+                    <Button x:Name="SaveExrBtn" Content="Save 32-bit EXR" Margin="0,2,0,0" Click="SaveExr_Click" IsEnabled="False"/>
+                    <Button x:Name="SaveTiffBtn" Content="Save 32-bit TIFF" Margin="0,2,0,0" Click="SaveTiffBtn_Click" IsEnabled="False"/>
+                    <Button x:Name="SaveStlBtn" Content="Save STL" Margin="0,2,0,0" Click="SaveStl_Click" IsEnabled="False"/>
+                    <Button x:Name="SaveObjBtn" Content="Save OBJ" Margin="0,2,0,0" Click="SaveObj_Click" IsEnabled="False"/>
+                    <Button x:Name="SaveAllBtn" Content="SAVE ALL MAPS" Background="#22C55E" Foreground="White" Margin="0,12,0,0" Padding="0,10" Click="SaveAll_Click" IsEnabled="False"/>
+                    <TextBlock Text="BATCH" Foreground="#8B5CF6" FontSize="12" Margin="0,16,0,4"/>
+                    <TextBlock Text="Applies current settings to every image in a folder." Foreground="#555" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                    <Button x:Name="BatchBtn" Content="Batch Process Folder..." Click="BatchProcess_Click"/>
+                </StackPanel>
+            </ScrollViewer>
         </Border>
     </Grid>
 </Window>

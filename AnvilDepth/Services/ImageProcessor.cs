@@ -111,34 +111,78 @@ public static class ImageProcessor
         return MatToFloatArray(toned, width, height);
     }
 
-    /// <summary>Post-processes an AI-estimated depth map: contrast/strength, real detail injection from the
-    /// source texture, tone mapping, optional background removal. sourceBgra may be null (detail
-    /// injection is skipped if so). removeBg prefers bgMask (AI segmentation) when supplied, and
-    /// otherwise falls back to thresholding sourceBgra's alpha channel — same behavior as the
-    /// Relief pipeline, so the checkbox does the same thing in both modes.</summary>
+    /// <summary>Post-processes an AI-estimated depth map: de-light (flatten/radius), depth-native
+    /// macro/micro frequency recombination (Low/Mid/High/Detail — this is what lets you suppress
+    /// the AI's tendency to read dark albedo, like mineral flecks or wood knots, as if it were real
+    /// surface depth), contrast/strength, optional detail borrowed from the source texture on top,
+    /// tone mapping, optional background removal. sourceBgra may be null (texture detail injection
+    /// is skipped if so — the depth-native frequency separation above still applies regardless).
+    /// removeBg prefers bgMask (AI segmentation) when supplied, and otherwise falls back to
+    /// thresholding sourceBgra's alpha channel — same behavior as the Relief pipeline.</summary>
     public static float[] ProcessForSculptOKQuality(
         float[] depth, int width, int height, byte[]? sourceBgra,
         float strength, float detail, float lowFreq, float midFreq, float highFreq, float gamma, bool invert,
         float highlights, float midtones, float shadows,
         bool zeroMidGray, float zeroLevel,
-        bool removeBg = false, float[]? bgMask = null)
+        bool removeBg = false, float[]? bgMask = null,
+        float flatten = 0f, float flattenRadius = 40f, bool injectTextureDetail = true)
     {
         using var src = new Mat(height, width, MatType.CV_32FC1);
         Marshal.Copy(depth, 0, src.Data, depth.Length);
 
-        // Contrast around the midpoint
+        // --- De-Light: same operation as the Relief pipeline's Flatten/Radius, now actually
+        // wired into AI mode (previously these two sliders were read from the UI but never
+        // reached this method at all — a real bug, not a "too subtle to see" issue). A large
+        // flattenRadius here is also the direct fix for the "pillow effect" on tiling textures:
+        // it removes the broad brightness gradient across the whole map before anything else
+        // sees it, rather than only feathering the seam at the very edge.
+        using var delighted = new Mat();
+        if (flatten > 0.001f)
+        {
+            double lightSigma = Math.Max(3.0, flattenRadius / 2.5);
+            using var lightMap = new Mat();
+            Cv2.GaussianBlur(src, lightMap, new OpenCvSharp.Size(0, 0), lightSigma);
+            Scalar meanLight = Cv2.Mean(lightMap);
+            using var lightDelta = new Mat();
+            Cv2.Subtract(lightMap, new Scalar(meanLight.Val0), lightDelta);
+            Cv2.Subtract(src, lightDelta * flatten, delighted);
+        }
+        else
+        {
+            src.CopyTo(delighted);
+        }
+
+        // --- Depth-native macro/micro frequency separation ---
+        // Low/Mid/High/Detail now recombine the AI depth map's OWN bands (previously these
+        // sliders only shaped detail borrowed from the source color texture — they had no way
+        // to touch the depth data's own macro shape at all). This is the real fix for "the AI
+        // punches dark mineral spots/wood knots in as holes": set Low down to suppress the AI's
+        // spurious large-scale shape errors from albedo, and rely on High/Detail for genuine
+        // fine surface variation instead.
+        using var b1 = new Mat(); Cv2.GaussianBlur(delighted, b1, new OpenCvSharp.Size(0, 0), 2.0);
+        using var b2 = new Mat(); Cv2.GaussianBlur(delighted, b2, new OpenCvSharp.Size(0, 0), 8.0);
+        using var b3 = new Mat(); Cv2.GaussianBlur(delighted, b3, new OpenCvSharp.Size(0, 0), 24.0);
+        using var midBand = new Mat(); Cv2.Subtract(b2, b3, midBand);
+        using var highBand = new Mat(); Cv2.Subtract(b1, b2, highBand);
+        using var detailBand = new Mat(); Cv2.Subtract(delighted, b1, detailBand);
+
+        using var recombined = new Mat();
+        Cv2.AddWeighted(b3, lowFreq, midBand, midFreq, 0, recombined);
+        Cv2.AddWeighted(recombined, 1.0, highBand, highFreq, 0, recombined);
+        Cv2.AddWeighted(recombined, 1.0, detailBand, detail, 0, recombined);
+
+        // Contrast around the midpoint (now applied to the recombined depth, not raw AI output)
         using var centered = new Mat();
-        Cv2.Subtract(src, new Scalar(0.5), centered);
+        Cv2.Subtract(recombined, new Scalar(0.5), centered);
         using var amplified = new Mat();
         Cv2.Add(centered * strength, new Scalar(0.5), amplified);
 
-        // Sobel *magnitude* discards sign/direction, so every edge becomes a thin bright outline
-        // regardless of which way the surface curves — that's the "scribble/noise" look. Use the same
-        // signed band-pass (difference-of-blurs) the Relief pipeline uses instead: it preserves which
-        // side of a bump is locally brighter vs. darker, which is what actually reads as rounded relief
-        // instead of an outline.
+        // Optional additional layer: real surface detail borrowed from the source color texture
+        // (stitching, engraving, surface grain that the AI depth map wouldn't otherwise capture).
+        // This is on top of the depth-native separation above, not a replacement for it — kept
+        // as its own toggle so existing setups that relied on this don't change unexpectedly.
         using var withDetail = new Mat();
-        if (sourceBgra != null && (detail > 0.001f || midFreq > 0.001f || highFreq > 0.001f || lowFreq > 0.001f))
+        if (injectTextureDetail && sourceBgra != null && (detail > 0.001f || midFreq > 0.001f || highFreq > 0.001f || lowFreq > 0.001f))
         {
             using var srcBgraMat = new Mat(height, width, MatType.CV_8UC4);
             Marshal.Copy(sourceBgra, 0, srcBgraMat.Data, sourceBgra.Length);
@@ -149,26 +193,20 @@ public static class ImageProcessor
             using var gray32f = new Mat();
             gray.ConvertTo(gray32f, MatType.CV_32FC1, 1.0 / 255.0);
 
-            // Four signed bands, same sigmas as the Relief pipeline:
-            //  - low    (24+):   broad shape from the source texture itself, mean-centered so it adds
-            //                     contrast rather than fighting the AI's own macro depth as a second vote
-            //  - mid    (8->24): rounded mass — a whole buckle or shoulder plate as one soft volume
-            //  - high   (2->8):  rounded detail — individual studs, strap edges
-            //  - detail (0->2):  fine texture — stitching, engraving, surface grain
-            using var b1 = new Mat(); Cv2.GaussianBlur(gray32f, b1, new OpenCvSharp.Size(0, 0), 2.0);
-            using var b2 = new Mat(); Cv2.GaussianBlur(gray32f, b2, new OpenCvSharp.Size(0, 0), 8.0);
-            using var b3 = new Mat(); Cv2.GaussianBlur(gray32f, b3, new OpenCvSharp.Size(0, 0), 24.0);
+            using var tb1 = new Mat(); Cv2.GaussianBlur(gray32f, tb1, new OpenCvSharp.Size(0, 0), 2.0);
+            using var tb2 = new Mat(); Cv2.GaussianBlur(gray32f, tb2, new OpenCvSharp.Size(0, 0), 8.0);
+            using var tb3 = new Mat(); Cv2.GaussianBlur(gray32f, tb3, new OpenCvSharp.Size(0, 0), 24.0);
             using var lowBand = new Mat();
-            Scalar meanB3 = Cv2.Mean(b3);
-            Cv2.Subtract(b3, new Scalar(meanB3.Val0), lowBand);
-            using var midBand = new Mat(); Cv2.Subtract(b2, b3, midBand);
-            using var highBand = new Mat(); Cv2.Subtract(b1, b2, highBand);
-            using var detailBand = new Mat(); Cv2.Subtract(gray32f, b1, detailBand);
+            Scalar meanTB3 = Cv2.Mean(tb3);
+            Cv2.Subtract(tb3, new Scalar(meanTB3.Val0), lowBand);
+            using var texMidBand = new Mat(); Cv2.Subtract(tb2, tb3, texMidBand);
+            using var texHighBand = new Mat(); Cv2.Subtract(tb1, tb2, texHighBand);
+            using var texDetailBand = new Mat(); Cv2.Subtract(gray32f, tb1, texDetailBand);
 
             using var detailSignal = new Mat();
-            Cv2.AddWeighted(lowBand, lowFreq, midBand, midFreq, 0, detailSignal);
-            Cv2.AddWeighted(detailSignal, 1.0, highBand, highFreq, 0, detailSignal);
-            Cv2.AddWeighted(detailSignal, 1.0, detailBand, detail, 0, detailSignal);
+            Cv2.AddWeighted(lowBand, lowFreq, texMidBand, midFreq, 0, detailSignal);
+            Cv2.AddWeighted(detailSignal, 1.0, texHighBand, highFreq, 0, detailSignal);
+            Cv2.AddWeighted(detailSignal, 1.0, texDetailBand, detail, 0, detailSignal);
 
             Cv2.AddWeighted(amplified, 1.0, detailSignal, 1.5, 0, withDetail);
         }
@@ -354,6 +392,21 @@ public static class ImageProcessor
         return bmp;
     }
 
+    /// <summary>Standard 8-bit grayscale PNG (256 levels) — the lowest-fidelity export option,
+    /// useful for quick previews or tools that specifically expect 8-bit input. For anything
+    /// requiring real precision, prefer 16-bit PNG or the 32-bit EXR/TIFF exports below — note
+    /// there's no "32-bit PNG" here because that isn't a real format; PNG tops out at 16 bits
+    /// per channel regardless of what you name the file.</summary>
+    public static void SaveAs8Bit(float[] data, int width, int height, string path)
+    {
+        using var mat = new Mat(height, width, MatType.CV_8UC1);
+        var pixels = new byte[width * height];
+        for (int i = 0; i < pixels.Length; i++)
+            pixels[i] = (byte)(Math.Clamp(data[i], 0f, 1f) * 255f);
+        Marshal.Copy(pixels, 0, mat.Data, pixels.Length);
+        Cv2.ImWrite(path, mat);
+    }
+
     public static void SaveAs16Bit(float[] data, int width, int height, string path)
     {
         using var mat = new Mat(height, width, MatType.CV_16UC1);
@@ -373,6 +426,53 @@ public static class ImageProcessor
         Cv2.ImWrite(path, mat);
     }
 
+    /// <summary>
+    /// Derives a cheap cavity/ambient-occlusion-style map from the depth data: recesses (areas
+    /// lower than their local surroundings) come out dark, raised/flat areas stay light. This is
+    /// the classic "difference of blurs" cavity trick — not a physically-based AO render, but a
+    /// fast, good-enough approximation for texture work. Like the normal map, derived from depth
+    /// already computed — no separate model.
+    /// </summary>
+    public static byte[] ComputeCavityMap(float[] depth, int width, int height, float strength, int blurRadius)
+    {
+        using var src = new Mat(height, width, MatType.CV_32FC1);
+        Marshal.Copy(depth, 0, src.Data, depth.Length);
+
+        using var blurred = new Mat();
+        Cv2.GaussianBlur(src, blurred, new OpenCvSharp.Size(0, 0), Math.Max(1.0, blurRadius));
+
+        // Positive where the surface dips below its local neighborhood average (a recess);
+        // negative where it rises above it (a ridge). Scale, invert, center at mid-gray.
+        using var cavity = new Mat();
+        Cv2.Subtract(blurred, src, cavity); // blurred - src: positive in recesses
+        using var scaled = new Mat();
+        cavity.ConvertTo(scaled, MatType.CV_32FC1, strength, 0.5); // *strength, +0.5 to center
+
+        var result = new byte[width * height];
+        var vals = MatToFloatArray(scaled, width, height);
+        for (int i = 0; i < vals.Length; i++)
+            result[i] = (byte)(Math.Clamp(vals[i], 0f, 1f) * 255f);
+        return result;
+    }
+
+    /// <summary>Wraps an 8-bit single-channel byte array (e.g. from ComputeCavityMap) as a
+    /// displayable grayscale BitmapSource.</summary>
+    public static BitmapSource GrayArrayToBitmapSource(byte[] gray, int width, int height)
+    {
+        var bmp = new WriteableBitmap(width, height, 96, 96, PixelFormats.Gray8, null);
+        bmp.WritePixels(new Int32Rect(0, 0, width, height), gray, width, 0);
+        bmp.Freeze();
+        return bmp;
+    }
+
+    /// <summary>Saves a cavity/AO map as an 8-bit grayscale PNG.</summary>
+    public static void SaveCavityMapPng(byte[] gray, int width, int height, string path)
+    {
+        using var mat = new Mat(height, width, MatType.CV_8UC1);
+        Marshal.Copy(gray, 0, mat.Data, gray.Length);
+        Cv2.ImWrite(path, mat);
+    }
+
     public static void SaveAsTiff32(float[] data, int width, int height, string path)
     {
         using var mat = new Mat(height, width, MatType.CV_32FC1);
@@ -389,16 +489,28 @@ public static class ImageProcessor
     /// invertY flips the green channel — OpenGL-style engines (Unity, most game engines) expect Y+
     /// pointing "up" the slope; DirectX-style engines (Unreal) expect the opposite.
     /// </summary>
-    public static byte[] ComputeNormalMap(float[] depth, int width, int height, float strength, bool invertY)
+    public static byte[] ComputeNormalMap(float[] depth, int width, int height, float strength, bool invertY, bool useEdgePreservingSmooth = false)
     {
         using var src = new Mat(height, width, MatType.CV_32FC1);
         Marshal.Copy(depth, 0, src.Data, depth.Length);
 
-        // Light blur before differentiating — raw per-pixel Sobel on noisy/quantized depth data
-        // produces a speckled normal map; a small blur trades a little fine detail for a much
-        // cleaner result, which is what you want for a bakeable normal map rather than raw noise.
         using var smoothed = new Mat();
-        Cv2.GaussianBlur(src, smoothed, new OpenCvSharp.Size(0, 0), 1.0);
+        if (useEdgePreservingSmooth)
+        {
+            // Bilateral filter: smooths flat/noisy regions while preserving real edges, unlike a
+            // plain Gaussian blur which softens edges right along with noise. Same general
+            // technique used by PBRFusion4 (a purpose-built PBR depth/normal diffusion model) for
+            // its own depth cleanup step before normal generation. d=9 neighborhood; sigmas tuned
+            // for depth's 0..1 float range rather than 0..255 pixel values.
+            Cv2.BilateralFilter(src, smoothed, 9, 0.1, 9);
+        }
+        else
+        {
+            // Light blur before differentiating — raw per-pixel Sobel on noisy/quantized depth data
+            // produces a speckled normal map; a small blur trades a little fine detail for a much
+            // cleaner result, which is what you want for a bakeable normal map rather than raw noise.
+            Cv2.GaussianBlur(src, smoothed, new OpenCvSharp.Size(0, 0), 1.0);
+        }
 
         using var gx = new Mat();
         using var gy = new Mat();
