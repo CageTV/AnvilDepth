@@ -25,7 +25,7 @@ double camYaw=45,camPitch=25,camDistance=300;
 Point3D meshCenter;
 Point? lastMousePos;
 [DllImport("shell32.dll")]static extern void DragAcceptFiles(IntPtr h,bool f);
-[DllImport("shell32.dll")]static extern uint DragQueryFile(IntPtr h,uint i,StringBuilder b,uint c);
+[DllImport("shell32.dll")]static extern uint DragQueryFile(IntPtr h,uint i,StringBuilder? b,uint c);
 [DllImport("shell32.dll")]static extern void DragFinish(IntPtr h);
 const int WM_DROP=0x0233;
 public MainWindow(){InitializeComponent();Loaded+=OnLoaded;SourceInitialized+=(s,e)=>{try{var hwnd=new WindowInteropHelper(this).Handle;var src=HwndSource.FromHwnd(hwnd);src?.AddHook(WndProc);DragAcceptFiles(hwnd,true);}catch{}};liveTimer.Tick+=(s,e)=>{liveTimer.Stop();DoLiveUpdate();};}

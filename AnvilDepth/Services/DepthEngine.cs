@@ -61,12 +61,19 @@ public sealed class DepthEngine : IDisposable
             bool gpu = false;
             try
             {
+                // DirectML EP requirements (per Microsoft's ONNX Runtime docs): memory pattern
+                // optimization must be disabled and execution must be sequential. Without these,
+                // ORT can silently fall back to CPU for part or all of the graph — no exception,
+                // no warning, just quietly slower — which is exactly the symptom of "GPU Ready"
+                // showing while a GPU (e.g. RTX 5070) sits idle and CPU usage spikes instead.
+                options.EnableMemoryPattern = false;
+                options.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
                 options.AppendExecutionProvider_DML();
                 gpu = true;
             }
             catch
             {
-                // No DX12-capable GPU — falls back to CPU automatically.
+                // No DX12-capable GPU, or DirectML unavailable — falls back to CPU automatically.
             }
 
             try
@@ -160,24 +167,11 @@ public sealed class DepthEngine : IDisposable
     }
 
     /// <summary>Runs one region of the source image through the model, returns a depth Mat sized to whatever the model outputs (0..1, white = near).</summary>
-    ///
-    /// Pillow/mattress-effect fix: a plain crop hands the model a hard, information-less boundary
-    /// at every edge, and depth models tend to read "nothing beyond this edge" as "receding" —
-    /// which is exactly the inflated-mattress look on tiling textures. Before resizing to the
-    /// model's input size, we pad the crop (mirrored content, not real neighboring pixels — see
-    /// below) so the model sees a continuation instead of a cliff, then crop the corresponding
-    /// inner window back out of its output afterward so the returned Mat still represents only
-    /// the requested region.
     private Mat RunSingleTile(Mat src, Rect region)
     {
         using var cropped = new Mat(src, region);
-
-        int padPx = Math.Max(8, (int)(Math.Min(region.Width, region.Height) * 0.12));
-        using var padded = new Mat();
-        Cv2.CopyMakeBorder(cropped, padded, padPx, padPx, padPx, padPx, BorderTypes.Reflect101);
-
         using var resized = new Mat();
-        Cv2.Resize(padded, resized, new OpenCvSharp.Size(_netW, _netH), 0, 0, InterpolationFlags.Cubic);
+        Cv2.Resize(cropped, resized, new OpenCvSharp.Size(_netW, _netH), 0, 0, InterpolationFlags.Cubic);
         using var rgb = new Mat();
         Cv2.CvtColor(resized, rgb, ColorConversionCodes.BGR2RGB);
 
@@ -218,27 +212,16 @@ public sealed class DepthEngine : IDisposable
         float min = raw.Min(), max = raw.Max();
         float range = Math.Max(max - min, 1e-6f);
 
-        using var depthPadded = new Mat(h, w, MatType.CV_32FC1);
+        var depth = new Mat(h, w, MatType.CV_32FC1);
         for (int y = 0; y < h; y++)
         {
             for (int x = 0; x < w; x++)
             {
                 // Depth-Anything outputs disparity (higher = closer); invert to white = near.
-                depthPadded.Set(y, x, 1f - (raw[y * w + x] - min) / range);
+                depth.Set(y, x, 1f - (raw[y * w + x] - min) / range);
             }
         }
-
-        // depthPadded represents the padded field of view (region + mirrored margin), in the
-        // model's own output resolution — crop out the inner window matching the true (unpadded)
-        // region so the returned Mat represents only what the caller asked for.
-        double padFracX = (double)padPx / padded.Width;
-        double padFracY = (double)padPx / padded.Height;
-        int innerX0 = Math.Clamp((int)Math.Round(w * padFracX), 0, w - 1);
-        int innerY0 = Math.Clamp((int)Math.Round(h * padFracY), 0, h - 1);
-        int innerW = Math.Max(1, w - innerX0 * 2);
-        int innerH = Math.Max(1, h - innerY0 * 2);
-
-        return depthPadded[new Rect(innerX0, innerY0, innerW, innerH)].Clone();
+        return depth;
     }
 
     private Mat RunTiledDetail(Mat src, int outW, int outH)
