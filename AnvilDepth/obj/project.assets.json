@@ -362,11 +362,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Modlists\\Texture Generator 3\\AnvilDepth - Normal\\AnvilDepth\\AnvilDepth.csproj",
+      "projectUniqueName": "C:\\Modlists\\AD-1.1\\AnvilDepth\\AnvilDepth.csproj",
       "projectName": "AnvilDepth",
-      "projectPath": "C:\\Modlists\\Texture Generator 3\\AnvilDepth - Normal\\AnvilDepth\\AnvilDepth.csproj",
+      "projectPath": "C:\\Modlists\\AD-1.1\\AnvilDepth\\AnvilDepth.csproj",
       "packagesPath": "C:\\Users\\JulioV\\.nuget\\packages\\",
-      "outputPath": "C:\\Modlists\\Texture Generator 3\\AnvilDepth - Normal\\AnvilDepth\\obj\\",
+      "outputPath": "C:\\Modlists\\AD-1.1\\AnvilDepth\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

@@ -114,6 +114,12 @@
                         </ModelVisual3D>
                     </Viewport3D>
                     <TextBlock Text="Drag to rotate · scroll to zoom" Foreground="#666" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6" IsHitTestVisible="False" Visibility="{Binding Visibility, ElementName=PreviewViewport}"/>
+                    <Border x:Name="ProgressPanel" Visibility="Collapsed" Background="#CC000000" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Padding="16,10" IsHitTestVisible="False">
+                        <StackPanel>
+                            <TextBlock x:Name="ProgressLabel" Text="Generating..." Foreground="#DDD" FontSize="12" Margin="0,0,0,4"/>
+                            <ProgressBar x:Name="RenderProgressBar" Height="8" Minimum="0" Maximum="1" Value="0" Foreground="#8B5CF6" Background="#222"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
                 <Border Grid.Row="1" Background="#111114" BorderBrush="#222" BorderThickness="0,1,0,0">
                     <StackPanel Orientation="Horizontal" Margin="8">
@@ -140,6 +146,7 @@
                         </Border>
                         <CheckBox x:Name="TilePreviewCheck" Content="Show Tiled 2x2" Foreground="#AAA" FontSize="13" VerticalAlignment="Center" Margin="16,0,0,0" Checked="TilePreview_Changed" Unchecked="TilePreview_Changed"/>
                         <Button x:Name="OpenPresetsFolderBtn" Content="Open Presets Folder" VerticalAlignment="Center" Margin="16,0,0,0" Padding="8,3" Click="OpenPresetsFolder_Click"/>
+                        <Button x:Name="OpenLogsFolderBtn" Content="Open Logs Folder" VerticalAlignment="Center" Margin="8,0,0,0" Padding="8,3" Click="OpenLogsFolder_Click"/>
                     </StackPanel>
                 </Border>
             </Grid>

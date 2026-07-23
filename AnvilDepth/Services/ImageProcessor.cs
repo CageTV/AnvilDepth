@@ -392,11 +392,6 @@ public static class ImageProcessor
         return bmp;
     }
 
-    /// <summary>Standard 8-bit grayscale PNG (256 levels) — the lowest-fidelity export option,
-    /// useful for quick previews or tools that specifically expect 8-bit input. For anything
-    /// requiring real precision, prefer 16-bit PNG or the 32-bit EXR/TIFF exports below — note
-    /// there's no "32-bit PNG" here because that isn't a real format; PNG tops out at 16 bits
-    /// per channel regardless of what you name the file.</summary>
     public static void SaveAs8Bit(float[] data, int width, int height, string path)
     {
         using var mat = new Mat(height, width, MatType.CV_8UC1);

@@ -44,9 +44,6 @@ C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net
 C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\DirectML.Debug.dll
 C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\DirectML.Debug.pdb
 C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\onnxruntime.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model.onnx
-C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model_base.onnx
-C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model_large.onnx
 C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\Assets\system_tray.ico
 C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.exe
 C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.deps.json
@@ -82,46 +79,49 @@ C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\obj\x64\Release\net
 C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.pdb
 C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.genruntimeconfig.cache
 C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\obj\x64\Release\net8.0-windows\ref\AnvilDepth.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\DirectML.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\DirectML.pdb
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\DirectML.Debug.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\DirectML.Debug.pdb
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\onnxruntime.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model.onnx
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model_base.onnx
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model_large.onnx
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\Assets\system_tray.ico
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.exe
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.deps.json
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.runtimeconfig.json
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.pdb
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\Microsoft.ML.OnnxRuntime.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\OpenCvSharp.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-arm64\native\onnxruntime.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-arm64\native\onnxruntime.lib
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x64\native\onnxruntime.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x64\native\onnxruntime.lib
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x86\native\onnxruntime.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x86\native\onnxruntime.lib
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x64\native\OpenCvSharpExtern.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x64\native\opencv_videoio_ffmpeg4100_64.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x86\native\OpenCvSharpExtern.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x86\native\opencv_videoio_ffmpeg4100.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.csproj.AssemblyReference.cache
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\MainWindow.baml
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\MainWindow.g.cs
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\App.g.cs
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth_Content.g.cs
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth_MarkupCompile.cache
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.g.resources
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.GeneratedMSBuildEditorConfig.editorconfig
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.AssemblyInfoInputs.cache
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.AssemblyInfo.cs
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.csproj.CoreCompileInputs.cache
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.csproj.Up2Date
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\refint\AnvilDepth.dll
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.pdb
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.genruntimeconfig.cache
-C:\Modlists\Texture Generator 3\AnvilDepth - Normal\AnvilDepth\obj\x64\Release\net8.0-windows\ref\AnvilDepth.dll
+C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model.onnx
+C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model_base.onnx
+C:\Modlists\Texture Generator 3\AnvilDepth - Copy\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model_large.onnx
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.csproj.AssemblyReference.cache
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\MainWindow.baml
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\MainWindow.g.cs
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\App.g.cs
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth_Content.g.cs
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth_MarkupCompile.cache
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.g.resources
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.GeneratedMSBuildEditorConfig.editorconfig
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.AssemblyInfoInputs.cache
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.AssemblyInfo.cs
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.csproj.CoreCompileInputs.cache
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.dll
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\refint\AnvilDepth.dll
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.pdb
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\DirectML.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\DirectML.pdb
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\DirectML.Debug.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\DirectML.Debug.pdb
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\onnxruntime.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model.onnx
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model_base.onnx
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\Models\model_large.onnx
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\Assets\system_tray.ico
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.exe
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.deps.json
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.runtimeconfig.json
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\AnvilDepth.pdb
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\Microsoft.ML.OnnxRuntime.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\OpenCvSharp.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-arm64\native\onnxruntime.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-arm64\native\onnxruntime.lib
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x64\native\onnxruntime.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x64\native\onnxruntime.lib
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x86\native\onnxruntime.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x86\native\onnxruntime.lib
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x64\native\OpenCvSharpExtern.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x64\native\opencv_videoio_ffmpeg4100_64.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x86\native\OpenCvSharpExtern.dll
+C:\Modlists\AD-1.1\AnvilDepth\bin\x64\Release\net8.0-windows\runtimes\win-x86\native\opencv_videoio_ffmpeg4100.dll
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.csproj.Up2Date
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\AnvilDepth.genruntimeconfig.cache
+C:\Modlists\AD-1.1\AnvilDepth\obj\x64\Release\net8.0-windows\ref\AnvilDepth.dll

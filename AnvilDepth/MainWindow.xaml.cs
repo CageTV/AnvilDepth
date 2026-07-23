@@ -119,14 +119,19 @@ if(rem) await EnsureBgMaskAsync();
 var bgra=curBgra;int w=dW,h=dH;string? p=curPath;var mask=bgMask;
 try{
 if(p==null) return;
-if(!ai){if(bgra==null) return;GenerateBtn.Content="PROCESSING...";GenerateBtn.IsEnabled=false;float[] proc=null!;await Task.Run(()=>{proc=ImageProcessor.ProcessTextureAtlasAdvanced(bgra!,w,h,det,gam,inv,hi,mid,sh,rem,lab,fl,flR,lowF,midF,highF,seam,seamB,zeroMid,zeroL,perc,0.02f,0.98f,mask);});curDepth=proc;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,w,h));GenerateBtn.Content="DONE";GenerateBtn.IsEnabled=true;EnableSaveButtons();return;}
+if(!ai){if(bgra==null) return;GenerateBtn.Content="PROCESSING...";GenerateBtn.IsEnabled=false;ShowProgress("Processing relief...");float[] proc=null!;await Task.Run(()=>{proc=ImageProcessor.ProcessTextureAtlasAdvanced(bgra!,w,h,det,gam,inv,hi,mid,sh,rem,lab,fl,flR,lowF,midF,highF,seam,seamB,zeroMid,zeroL,perc,0.02f,0.98f,mask);});curDepth=proc;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,w,h));GenerateBtn.Content="DONE";GenerateBtn.IsEnabled=true;EnableSaveButtons();HideProgress();return;}
 GenerateBtn.Content="GENERATING...";GenerateBtn.IsEnabled=false;
-var res=await eng!.EstimateDepthAsync(p!,hq);
+ShowProgress(hq?"Running AI depth (HQ Tiled)...":"Running AI depth...");
+var uiProgress=new Progress<double>(v=>{RenderProgressBar.Value=v;ProgressLabel.Text=v<0.15?"Running AI depth (global pass)...":v<0.95?$"Running AI depth — tiling detail ({(int)(v*100)}%)...":"Finishing...";});
+var res=await eng!.EstimateDepthAsync(p!,hq,uiProgress);
 aiRawDepth=res.Depth;aiRawW=res.Width;aiRawH=res.Height;
 var proc2=ImageProcessor.ProcessForSculptOKQuality(res.Depth,res.Width,res.Height,bgra,str,det,lowF,midF,highF,gam,inv,hi,mid,sh,zeroMid,zeroL,rem,mask,fl,flR);
 curDepth=proc2;dW=res.Width;dH=res.Height;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc2,dW,dH));
 GenerateBtn.Content="DONE";GenerateBtn.IsEnabled=true;EnableSaveButtons();
-}catch(Exception ex){MessageBox.Show(ex.Message);GenerateBtn.Content="FAILED";GenerateBtn.IsEnabled=true;}}
+}catch(Exception ex){Logger.LogException("UI: Generate_Click",ex);MessageBox.Show(ex.Message);GenerateBtn.Content="FAILED";GenerateBtn.IsEnabled=true;}
+finally{HideProgress();}}
+void ShowProgress(string label){ProgressPanel.Visibility=Visibility.Visible;ProgressLabel.Text=label;RenderProgressBar.Value=0;}
+void HideProgress(){ProgressPanel.Visibility=Visibility.Collapsed;}
 void EnableSaveButtons(){Save8PngBtn.IsEnabled=true;SavePngBtn.IsEnabled=true;SaveExrBtn.IsEnabled=true;SaveTiffBtn.IsEnabled=true;SaveStlBtn.IsEnabled=true;SaveObjBtn.IsEnabled=true;GenerateNormalBtn.IsEnabled=true;GenerateAOBtn.IsEnabled=true;SaveAllBtn.IsEnabled=true;}
 void Mode_Changed(object s,RoutedEventArgs? e){if(AiModelCheck==null) return;GenerateBtn.Content=AiModelCheck.IsChecked==true?"AI DEPTH":"RELIEF";}
 // Swaps the loaded ONNX model (Small/Base/Large/Pro) at runtime. Only replaces the active
@@ -141,6 +146,7 @@ void Mode_Changed(object s,RoutedEventArgs? e){if(AiModelCheck==null) return;Gen
 async void ModelSize_Changed(object s,RoutedEventArgs e){
 if(eng==null) return;
 string file=ModelBaseRadio.IsChecked==true?"model_base.onnx":ModelLargeRadio.IsChecked==true?"model_large.onnx":ModelProRadio.IsChecked==true?"model_pro.onnx":"model.onnx";
+Logger.Log($"UI: ModelSize_Changed -> {file}");
 bool wasEnabled=GenerateBtn.IsEnabled;GenerateBtn.IsEnabled=false;
 GpuStatusText.Text=$"Loading {file}...";
 var status=await eng.LoadModelAsync(file);
@@ -418,6 +424,11 @@ string dir=Path.Combine(AppContext.BaseDirectory,"Presets");
 Directory.CreateDirectory(dir);
 Process.Start(new ProcessStartInfo{FileName=dir,UseShellExecute=true});
 }catch(Exception ex){MessageBox.Show($"Couldn't open Presets folder: {ex.Message}");}
+}
+void OpenLogsFolder_Click(object s,RoutedEventArgs e){
+try{
+Process.Start(new ProcessStartInfo{FileName=Logger.LogFolderPath,UseShellExecute=true});
+}catch(Exception ex){MessageBox.Show($"Couldn't open Logs folder: {ex.Message}");}
 }
 // Scales the entire sidebar (text, sliders, buttons, checkboxes — not just font size) via
 // LayoutTransform, which WPF's layout system respects for measuring/arranging inside the

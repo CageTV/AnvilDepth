@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Bb4V6Vj6iMA=",
+  "dgSpecHash": "vcj5rO0kSBQ=",
   "success": true,
-  "projectFilePath": "C:\\Modlists\\Texture Generator 3\\AnvilDepth - Normal\\AnvilDepth\\AnvilDepth.csproj",
+  "projectFilePath": "C:\\Modlists\\AD-1.1\\AnvilDepth\\AnvilDepth.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\JulioV\\.nuget\\packages\\microsoft.ai.directml\\1.15.2\\microsoft.ai.directml.1.15.2.nupkg.sha512",
     "C:\\Users\\JulioV\\.nuget\\packages\\microsoft.ml.onnxruntime.directml\\1.20.1\\microsoft.ml.onnxruntime.directml.1.20.1.nupkg.sha512",
