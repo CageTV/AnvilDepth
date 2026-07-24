@@ -29,9 +29,7 @@
                     <CheckBox x:Name="LargeTextCheck" Content="Large Text" Foreground="#AAA" FontSize="13" Margin="0,8,0,0" Checked="LargeText_Changed" Unchecked="LargeText_Changed"/>
                     <CheckBox x:Name="AiModelCheck" Content="Use AI" Foreground="White" Checked="Mode_Changed" Unchecked="Mode_Changed" Margin="0,8,0,0"/>
                     <StackPanel Orientation="Horizontal" Margin="18,4,0,0">
-                        <RadioButton x:Name="ModelSmallRadio" GroupName="ModelSize" Content="Small" IsChecked="True" Foreground="#AAA" FontSize="13" Margin="0,0,8,0" Checked="ModelSize_Changed"/>
-                        <RadioButton x:Name="ModelBaseRadio" GroupName="ModelSize" Content="Base" Foreground="#AAA" FontSize="13" Margin="0,0,8,0" Checked="ModelSize_Changed"/>
-                        <RadioButton x:Name="ModelLargeRadio" GroupName="ModelSize" Content="Large" Foreground="#AAA" FontSize="13" Margin="0,0,8,0" Checked="ModelSize_Changed"/>
+                        <RadioButton x:Name="ModelLargeRadio" GroupName="ModelSize" Content="Large" IsChecked="True" Foreground="#AAA" FontSize="13" Margin="0,0,8,0" Checked="ModelSize_Changed"/>
                         <RadioButton x:Name="ModelProRadio" GroupName="ModelSize" Content="Pro" Foreground="#AAA" FontSize="13" Checked="ModelSize_Changed"/>
                     </StackPanel>
                     <TextBlock Text="1. LAB" Foreground="#8B5CF6" FontSize="12" Margin="0,8,0,2"/>
@@ -105,6 +103,9 @@
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0">
                     <Image x:Name="OutputImage" Stretch="Uniform"/>
+                    <Border Background="#CC000000" VerticalAlignment="Top" HorizontalAlignment="Stretch" Padding="10,6" IsHitTestVisible="False">
+                        <TextBlock x:Name="PipelineIndicatorText" Text="No render yet." Foreground="#888" FontSize="13" FontWeight="Bold" TextWrapping="Wrap"/>
+                    </Border>
                     <Viewport3D x:Name="PreviewViewport" Visibility="Collapsed" ClipToBounds="True" MouseLeftButtonDown="Viewport_MouseDown" MouseLeftButtonUp="Viewport_MouseUp" MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel">
                         <Viewport3D.Camera>
                             <PerspectiveCamera x:Name="PreviewCamera" Position="0,150,300" LookDirection="0,-0.4,-1" UpDirection="0,1,0" FieldOfView="45"/>

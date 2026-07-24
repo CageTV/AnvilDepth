@@ -119,7 +119,7 @@ if(rem) await EnsureBgMaskAsync();
 var bgra=curBgra;int w=dW,h=dH;string? p=curPath;var mask=bgMask;
 try{
 if(p==null) return;
-if(!ai){if(bgra==null) return;GenerateBtn.Content="PROCESSING...";GenerateBtn.IsEnabled=false;ShowProgress("Processing relief...");float[] proc=null!;await Task.Run(()=>{proc=ImageProcessor.ProcessTextureAtlasAdvanced(bgra!,w,h,det,gam,inv,hi,mid,sh,rem,lab,fl,flR,lowF,midF,highF,seam,seamB,zeroMid,zeroL,perc,0.02f,0.98f,mask);});curDepth=proc;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,w,h));GenerateBtn.Content="DONE";GenerateBtn.IsEnabled=true;EnableSaveButtons();HideProgress();return;}
+if(!ai){if(bgra==null) return;GenerateBtn.Content="PROCESSING...";GenerateBtn.IsEnabled=false;ShowProgress("Processing relief...");float[] proc=null!;await Task.Run(()=>{proc=ImageProcessor.ProcessTextureAtlasAdvanced(bgra!,w,h,det,gam,inv,hi,mid,sh,rem,lab,fl,flR,lowF,midF,highF,seam,seamB,zeroMid,zeroL,perc,0.02f,0.98f,mask);});curDepth=proc;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,w,h));GenerateBtn.Content="DONE";GenerateBtn.IsEnabled=true;EnableSaveButtons();HideProgress();PipelineIndicatorText.Text="⚠ PIPELINE: RELIEF (no AI model used — grayscale/LAB + blur/contrast only). Check 'Use AI' above to use a neural depth model instead.";PipelineIndicatorText.Foreground=System.Windows.Media.Brushes.Orange;Logger.Log("Generate_Click: completed via RELIEF pipeline (Use AI was unchecked). No ONNX model was involved in this result.");return;}
 GenerateBtn.Content="GENERATING...";GenerateBtn.IsEnabled=false;
 ShowProgress(hq?"Running AI depth (HQ Tiled)...":"Running AI depth...");
 var uiProgress=new Progress<double>(v=>{RenderProgressBar.Value=v;ProgressLabel.Text=v<0.15?"Running AI depth (global pass)...":v<0.95?$"Running AI depth — tiling detail ({(int)(v*100)}%)...":"Finishing...";});
@@ -128,6 +128,10 @@ aiRawDepth=res.Depth;aiRawW=res.Width;aiRawH=res.Height;
 var proc2=ImageProcessor.ProcessForSculptOKQuality(res.Depth,res.Width,res.Height,bgra,str,det,lowF,midF,highF,gam,inv,hi,mid,sh,zeroMid,zeroL,rem,mask,fl,flR,macroFreq:macroF,microFreq:microF,clarity:clar);
 curDepth=proc2;dW=res.Width;dH=res.Height;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc2,dW,dH));
 GenerateBtn.Content="DONE";GenerateBtn.IsEnabled=true;EnableSaveButtons();
+string activeModelFile=ModelProRadio.IsChecked==true?"model_pro.onnx":"model_large.onnx";
+PipelineIndicatorText.Text=$"✓ PIPELINE: AI — {activeModelFile}, {aiRawW}x{aiRawH} native{(hq?" + HQ Tiled":"")}.";
+PipelineIndicatorText.Foreground=System.Windows.Media.Brushes.LightGreen;
+Logger.Log($"Generate_Click: completed via AI pipeline — {activeModelFile}, native {aiRawW}x{aiRawH}, HQ Tiled={hq}.");
 }catch(Exception ex){Logger.LogException("UI: Generate_Click",ex);MessageBox.Show(ex.Message);GenerateBtn.Content="FAILED";GenerateBtn.IsEnabled=true;}
 finally{HideProgress();}}
 void ShowProgress(string label){ProgressPanel.Visibility=Visibility.Visible;ProgressLabel.Text=label;RenderProgressBar.Value=0;}
@@ -145,7 +149,7 @@ void Mode_Changed(object s,RoutedEventArgs? e){if(AiModelCheck==null) return;Gen
 // what you're seeing.
 async void ModelSize_Changed(object s,RoutedEventArgs e){
 if(eng==null) return;
-string file=ModelBaseRadio.IsChecked==true?"model_base.onnx":ModelLargeRadio.IsChecked==true?"model_large.onnx":ModelProRadio.IsChecked==true?"model_pro.onnx":"model.onnx";
+string file=ModelProRadio.IsChecked==true?"model_pro.onnx":"model_large.onnx";
 Logger.Log($"UI: ModelSize_Changed -> {file}");
 bool wasEnabled=GenerateBtn.IsEnabled;GenerateBtn.IsEnabled=false;
 GpuStatusText.Text=$"Loading {file}...";
@@ -156,7 +160,7 @@ aiRawDepth=null;
 ClearNormalMap();ClearAOMap();
 if(curPath!=null&&AiModelCheck.IsChecked==true) Generate_Click(this,new RoutedEventArgs());
 }
-void Reproc(){try{if(AiModelCheck.IsChecked==true) return;if(curBgra==null){Logger.Log("Reproc: skipped, curBgra is null (no image loaded).");return;}float fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,det=(float)DetailSlider.Value,gam=(float)GammaSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value;bool inv=InvertCheck.IsChecked==true,rem=RemoveBgCheck.IsChecked==true,lab=UseLabCheck.IsChecked==true,seam=SeamlessCheck.IsChecked==true;float seamB=(float)SeamBlendSlider.Value;bool zeroMid=ZeroMidGrayCheck.IsChecked==true;float zeroL=(float)ZeroLevelSlider.Value+(zeroMid?0.5f:0f);bool perc=PercentileCheck.IsChecked==true;var proc=ImageProcessor.ProcessTextureAtlasAdvanced(curBgra!,dW,dH,det,gam,inv,hi,mid,sh,rem,lab,fl,flR,lowF,midF,highF,seam,seamB,zeroMid,zeroL,perc,0.02f,0.98f,bgMask);curDepth=proc;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,dW,dH));EnableSaveButtons();Logger.Log("Reproc: live update applied (Relief mode).");}catch(Exception ex){Logger.LogException("Reproc",ex);}}
+void Reproc(){try{if(AiModelCheck.IsChecked==true) return;if(curBgra==null){Logger.Log("Reproc: skipped, curBgra is null (no image loaded).");return;}float fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,det=(float)DetailSlider.Value,gam=(float)GammaSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value;bool inv=InvertCheck.IsChecked==true,rem=RemoveBgCheck.IsChecked==true,lab=UseLabCheck.IsChecked==true,seam=SeamlessCheck.IsChecked==true;float seamB=(float)SeamBlendSlider.Value;bool zeroMid=ZeroMidGrayCheck.IsChecked==true;float zeroL=(float)ZeroLevelSlider.Value+(zeroMid?0.5f:0f);bool perc=PercentileCheck.IsChecked==true;var proc=ImageProcessor.ProcessTextureAtlasAdvanced(curBgra!,dW,dH,det,gam,inv,hi,mid,sh,rem,lab,fl,flR,lowF,midF,highF,seam,seamB,zeroMid,zeroL,perc,0.02f,0.98f,bgMask);curDepth=proc;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,dW,dH));EnableSaveButtons();PipelineIndicatorText.Text="⚠ PIPELINE: RELIEF (no AI model used). Check 'Use AI' above to use a neural depth model instead.";PipelineIndicatorText.Foreground=System.Windows.Media.Brushes.Orange;Logger.Log("Reproc: live update applied (Relief mode).");}catch(Exception ex){Logger.LogException("Reproc",ex);}}
 void ReprocAiLive(){
 if(aiRawDepth==null){Logger.Log("ReprocAiLive: skipped, aiRawDepth is null — click Generate at least once for this image/model before sliders will live-update.");return;}
 float str=(float)StrengthSlider.Value,det=(float)DetailSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,gam=(float)GammaSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value,fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,macroF=(float)MacroFreqSlider.Value,microF=(float)MicroFreqSlider.Value,clar=(float)ClaritySlider.Value;
@@ -172,6 +176,8 @@ Dispatcher.Invoke(()=>{
 if(cts.IsCancellationRequested) return;
 curDepth=proc;dW=w;dH=h;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,w,h));
 EnableSaveButtons();
+PipelineIndicatorText.Text=$"✓ PIPELINE: AI — {aiRawW}x{aiRawH} native, live-adjusted.";
+PipelineIndicatorText.Foreground=System.Windows.Media.Brushes.LightGreen;
 Logger.Log("ReprocAiLive: live update applied to preview.");
 });
 }catch(Exception ex){Logger.LogException("ReprocAiLive.Task.Run",ex);}

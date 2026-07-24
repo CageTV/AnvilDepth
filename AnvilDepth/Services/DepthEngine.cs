@@ -38,7 +38,7 @@ public sealed class DepthEngine : IDisposable
     private InferenceSession? _session;
     private int _netW = DefaultNetSize;
     private int _netH = DefaultNetSize;
-    private string _currentModelFileName = "model.onnx";
+    private string _currentModelFileName = "model_large.onnx";
 
     // Guards every read/dispose/swap of _session. This is the actual fix for the crash-on-model-
     // switch bug: LoadModelAsync used to do `_session?.Dispose(); _session = newSession;` with no
@@ -52,17 +52,15 @@ public sealed class DepthEngine : IDisposable
     // just waits for the generation to finish, instead of crashing.
     private readonly SemaphoreSlim _sessionLock = new(1, 1);
 
-    /// <summary>Loads Models\model.onnx (the default/Small model) at startup — kept for backward compatibility
-    /// with existing installs that only have a single model.onnx.</summary>
-    public Task<string> InitializeAsync() => LoadModelAsync("model.onnx");
+    /// <summary>Loads Models\model_large.onnx (the default model for this distribution) at startup.</summary>
+    public Task<string> InitializeAsync() => LoadModelAsync("model_large.onnx");
 
     /// <summary>
-    /// Loads (or swaps to) a specific model file from the Models folder, e.g. "model.onnx" (Small),
-    /// "model_base.onnx", or "model_large.onnx". Safe to call after a model is already loaded —
-    /// the new session only replaces the old one on success, so a failed swap (missing file,
-    /// incompatible export) leaves the previously working model active instead of leaving the
-    /// engine in a broken state.
-    /// </summary>
+    /// Loads (or swaps to) a specific model file from the Models folder — this distribution ships
+    /// "model_large.onnx" (Large) and "model_pro.onnx" (Pro) only. Safe to call after a model is
+    /// already loaded — the new session only replaces the old one on success, so a failed swap
+    /// (missing file, incompatible export) leaves the previously working model active instead of
+    /// leaving the engine in a broken state.</summary>
     public Task<string> LoadModelAsync(string modelFileName)
     {
         return Task.Run(() =>
@@ -199,7 +197,7 @@ public sealed class DepthEngine : IDisposable
             try
             {
                 if (_session == null)
-                    throw new InvalidOperationException("AI model isn't loaded. Uncheck 'Use AI' for Relief mode, or add Models\\model.onnx.");
+                    throw new InvalidOperationException("AI model isn't loaded. Uncheck 'Use AI' for Relief mode, or add Models\\model_large.onnx.");
 
                 using var src = Cv2.ImRead(path, ImreadModes.Color);
                 if (src.Empty())
