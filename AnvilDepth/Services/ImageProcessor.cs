@@ -125,7 +125,8 @@ public static class ImageProcessor
         float highlights, float midtones, float shadows,
         bool zeroMidGray, float zeroLevel,
         bool removeBg = false, float[]? bgMask = null,
-        float flatten = 0f, float flattenRadius = 40f, bool injectTextureDetail = true)
+        float flatten = 0f, float flattenRadius = 40f, bool injectTextureDetail = true,
+        float macroFreq = 0f, float microFreq = 0f, float clarity = 0f)
     {
         using var src = new Mat(height, width, MatType.CV_32FC1);
         Marshal.Copy(depth, 0, src.Data, depth.Length);
@@ -153,12 +154,10 @@ public static class ImageProcessor
         }
 
         // --- Depth-native macro/micro frequency separation ---
-        // Low/Mid/High/Detail now recombine the AI depth map's OWN bands (previously these
-        // sliders only shaped detail borrowed from the source color texture — they had no way
-        // to touch the depth data's own macro shape at all). This is the real fix for "the AI
-        // punches dark mineral spots/wood knots in as holes": set Low down to suppress the AI's
-        // spurious large-scale shape errors from albedo, and rely on High/Detail for genuine
-        // fine surface variation instead.
+        // Low/Mid/High/Detail recombine the AI depth map's OWN bands (this is the real fix for
+        // "the AI punches dark mineral spots/wood knots in as holes": set Low down to suppress
+        // the AI's spurious large-scale shape errors from albedo, and rely on High/Detail for
+        // genuine fine surface variation instead).
         using var b1 = new Mat(); Cv2.GaussianBlur(delighted, b1, new OpenCvSharp.Size(0, 0), 2.0);
         using var b2 = new Mat(); Cv2.GaussianBlur(delighted, b2, new OpenCvSharp.Size(0, 0), 8.0);
         using var b3 = new Mat(); Cv2.GaussianBlur(delighted, b3, new OpenCvSharp.Size(0, 0), 24.0);
@@ -171,11 +170,51 @@ public static class ImageProcessor
         Cv2.AddWeighted(recombined, 1.0, highBand, highFreq, 0, recombined);
         Cv2.AddWeighted(recombined, 1.0, detailBand, detail, 0, recombined);
 
+        // --- Macro octave: broader than Low (sigma 48 vs 24) — huge, soft volume swells (a whole
+        // shoulder or torso reading as one rounded mass) that the existing 3-sigma pyramid is too
+        // narrow to isolate on its own. Purely additive on top of the existing recombination, and
+        // defaults to 0 (off), so it never shifts output for anyone not using it — a genuinely new
+        // band, not a restructuring of the existing four.
+        if (macroFreq > 0.001f)
+        {
+            using var b0 = new Mat(); Cv2.GaussianBlur(delighted, b0, new OpenCvSharp.Size(0, 0), 48.0);
+            using var macroBand = new Mat();
+            Scalar meanB0 = Cv2.Mean(b0);
+            Cv2.Subtract(b0, new Scalar(meanB0.Val0), macroBand);
+            Cv2.AddWeighted(recombined, 1.0, macroBand, macroFreq, 0, recombined);
+        }
+
+        // --- Micro octave: finer than Detail (sigma 0.6 vs the sigma-2 cutoff Detail uses) — the
+        // very finest sub-pixel grain: pores, cloth weave, engraved micro-texture. Also additive
+        // and off by default for the same reason as Macro above.
+        if (microFreq > 0.001f)
+        {
+            using var b4 = new Mat(); Cv2.GaussianBlur(delighted, b4, new OpenCvSharp.Size(0, 0), 0.6);
+            using var microBand = new Mat();
+            Cv2.Subtract(delighted, b4, microBand);
+            Cv2.AddWeighted(recombined, 1.0, microBand, microFreq, 0, recombined);
+        }
+
         // Contrast around the midpoint (now applied to the recombined depth, not raw AI output)
         using var centered = new Mat();
         Cv2.Subtract(recombined, new Scalar(0.5), centered);
         using var amplified = new Mat();
         Cv2.Add(centered * strength, new Scalar(0.5), amplified);
+
+        // --- Clarity: a large-radius local-contrast pass (the same "clarity" slider concept from
+        // photo editing) — distinct from just raising Mid/High, because it's an unsharp-mask style
+        // boost applied AFTER contrast/strength amplification as a final polish, punching up how
+        // "defined" every surface reads without touching the fine Detail/Micro grain or the overall
+        // brightness curve. This is the single highest-leverage addition for the "crunchy, sculpted"
+        // look in game-asset AO bakes — it's an local-contrast operator, not another additive band.
+        if (clarity > 0.001f)
+        {
+            using var clarityBase = new Mat();
+            Cv2.GaussianBlur(amplified, clarityBase, new OpenCvSharp.Size(0, 0), 16.0);
+            using var clarityHighPass = new Mat();
+            Cv2.Subtract(amplified, clarityBase, clarityHighPass);
+            Cv2.AddWeighted(amplified, 1.0, clarityHighPass, clarity, 0, amplified);
+        }
 
         // Optional additional layer: real surface detail borrowed from the source color texture
         // (stitching, engraving, surface grain that the AI depth map wouldn't otherwise capture).

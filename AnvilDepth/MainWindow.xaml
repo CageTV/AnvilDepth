@@ -1,4 +1,4 @@
-<Window x:Class="AnvilDepth.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="AnvilDepth V7.20 Checklist" Height="980" Width="1560" Background="#0A0A0A" AllowDrop="True" DragEnter="Window_DragEnter" DragOver="Window_DragOver" Drop="Window_Drop">
+<Window x:Class="AnvilDepth.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="AnvilDepth V0.8.0 Checklist" Height="980" Width="1560" Background="#0A0A0A" AllowDrop="True" DragEnter="Window_DragEnter" DragOver="Window_DragOver" Drop="Window_Drop">
     <Grid Background="#0A0A0A">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="390"/>
@@ -40,6 +40,9 @@
                     <Slider x:Name="FlattenRadiusSlider" Minimum="5" Maximum="100" Value="40" ValueChanged="Slider_ValueChanged"/>
                     <TextBlock x:Name="FlattenRadiusLabel" Text="40" FontSize="12" Foreground="#666"/>
                     <TextBlock Text="3. FREQ" Foreground="#8B5CF6" FontSize="12" Margin="0,8,0,2"/>
+                    <TextBlock Text="Macro (huge soft volumes)" Foreground="#AAA" FontSize="13"/>
+                    <Slider x:Name="MacroFreqSlider" Minimum="0" Maximum="2" Value="0" ValueChanged="Slider_ValueChanged"/>
+                    <TextBlock x:Name="MacroFreqLabel" Text="0" FontSize="12" Foreground="#666"/>
                     <TextBlock Text="Low" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="LowFreqSlider" Minimum="0" Maximum="2" Value="1" ValueChanged="Slider_ValueChanged"/>
                     <TextBlock x:Name="LowFreqLabel" Text="1" FontSize="12" Foreground="#666"/>
@@ -52,6 +55,12 @@
                     <TextBlock Text="Detail" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="DetailSlider" Minimum="0" Maximum="1" Value="0.85" ValueChanged="Slider_ValueChanged"/>
                     <TextBlock x:Name="DetailLabel" Text="0.85" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="Micro (finest sub-pixel grain)" Foreground="#AAA" FontSize="13"/>
+                    <Slider x:Name="MicroFreqSlider" Minimum="0" Maximum="1" Value="0" ValueChanged="Slider_ValueChanged"/>
+                    <TextBlock x:Name="MicroFreqLabel" Text="0" FontSize="12" Foreground="#666"/>
+                    <TextBlock Text="Clarity (local contrast punch)" Foreground="#AAA" FontSize="13"/>
+                    <Slider x:Name="ClaritySlider" Minimum="0" Maximum="1" Value="0" ValueChanged="Slider_ValueChanged"/>
+                    <TextBlock x:Name="ClarityLabel" Text="0" FontSize="12" Foreground="#666"/>
                     <TextBlock Text="4. TONE" Foreground="#8B5CF6" FontSize="12" Margin="0,8,0,2"/>
                     <TextBlock Text="Gamma" Foreground="#AAA" FontSize="13"/>
                     <Slider x:Name="GammaSlider" Minimum="0.2" Maximum="3" Value="1" ValueChanged="Slider_ValueChanged"/>

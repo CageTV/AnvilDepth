@@ -114,7 +114,7 @@ if(AiModelCheck.IsChecked==true) Generate_Click(this,new RoutedEventArgs());
 else ScheduleLiveUpdate();
 }
 async void Generate_Click(object s,RoutedEventArgs e){
-float fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,det=(float)DetailSlider.Value,gam=(float)GammaSlider.Value,str=(float)StrengthSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value;bool inv=InvertCheck.IsChecked==true,rem=RemoveBgCheck.IsChecked==true,hq=HighQualityCheck.IsChecked==true,ai=AiModelCheck.IsChecked==true,lab=UseLabCheck.IsChecked==true,seam=SeamlessCheck.IsChecked==true;float seamB=(float)SeamBlendSlider.Value;bool zeroMid=ZeroMidGrayCheck.IsChecked==true;float zeroL=(float)ZeroLevelSlider.Value+(zeroMid?0.5f:0f);bool perc=PercentileCheck.IsChecked==true;
+float fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,det=(float)DetailSlider.Value,gam=(float)GammaSlider.Value,str=(float)StrengthSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value,macroF=(float)MacroFreqSlider.Value,microF=(float)MicroFreqSlider.Value,clar=(float)ClaritySlider.Value;bool inv=InvertCheck.IsChecked==true,rem=RemoveBgCheck.IsChecked==true,hq=HighQualityCheck.IsChecked==true,ai=AiModelCheck.IsChecked==true,lab=UseLabCheck.IsChecked==true,seam=SeamlessCheck.IsChecked==true;float seamB=(float)SeamBlendSlider.Value;bool zeroMid=ZeroMidGrayCheck.IsChecked==true;float zeroL=(float)ZeroLevelSlider.Value+(zeroMid?0.5f:0f);bool perc=PercentileCheck.IsChecked==true;
 if(rem) await EnsureBgMaskAsync();
 var bgra=curBgra;int w=dW,h=dH;string? p=curPath;var mask=bgMask;
 try{
@@ -125,7 +125,7 @@ ShowProgress(hq?"Running AI depth (HQ Tiled)...":"Running AI depth...");
 var uiProgress=new Progress<double>(v=>{RenderProgressBar.Value=v;ProgressLabel.Text=v<0.15?"Running AI depth (global pass)...":v<0.95?$"Running AI depth — tiling detail ({(int)(v*100)}%)...":"Finishing...";});
 var res=await eng!.EstimateDepthAsync(p!,hq,uiProgress);
 aiRawDepth=res.Depth;aiRawW=res.Width;aiRawH=res.Height;
-var proc2=ImageProcessor.ProcessForSculptOKQuality(res.Depth,res.Width,res.Height,bgra,str,det,lowF,midF,highF,gam,inv,hi,mid,sh,zeroMid,zeroL,rem,mask,fl,flR);
+var proc2=ImageProcessor.ProcessForSculptOKQuality(res.Depth,res.Width,res.Height,bgra,str,det,lowF,midF,highF,gam,inv,hi,mid,sh,zeroMid,zeroL,rem,mask,fl,flR,macroFreq:macroF,microFreq:microF,clarity:clar);
 curDepth=proc2;dW=res.Width;dH=res.Height;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc2,dW,dH));
 GenerateBtn.Content="DONE";GenerateBtn.IsEnabled=true;EnableSaveButtons();
 }catch(Exception ex){Logger.LogException("UI: Generate_Click",ex);MessageBox.Show(ex.Message);GenerateBtn.Content="FAILED";GenerateBtn.IsEnabled=true;}
@@ -159,13 +159,13 @@ if(curPath!=null&&AiModelCheck.IsChecked==true) Generate_Click(this,new RoutedEv
 void Reproc(){try{if(AiModelCheck.IsChecked==true) return;if(curBgra==null) return;float fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,det=(float)DetailSlider.Value,gam=(float)GammaSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value;bool inv=InvertCheck.IsChecked==true,rem=RemoveBgCheck.IsChecked==true,lab=UseLabCheck.IsChecked==true,seam=SeamlessCheck.IsChecked==true;float seamB=(float)SeamBlendSlider.Value;bool zeroMid=ZeroMidGrayCheck.IsChecked==true;float zeroL=(float)ZeroLevelSlider.Value+(zeroMid?0.5f:0f);bool perc=PercentileCheck.IsChecked==true;var proc=ImageProcessor.ProcessTextureAtlasAdvanced(curBgra!,dW,dH,det,gam,inv,hi,mid,sh,rem,lab,fl,flR,lowF,midF,highF,seam,seamB,zeroMid,zeroL,perc,0.02f,0.98f,bgMask);curDepth=proc;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,dW,dH));EnableSaveButtons();}catch{}}
 void ReprocAiLive(){
 if(aiRawDepth==null) return;
-float str=(float)StrengthSlider.Value,det=(float)DetailSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,gam=(float)GammaSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value,fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value;
+float str=(float)StrengthSlider.Value,det=(float)DetailSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,gam=(float)GammaSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value,fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,macroF=(float)MacroFreqSlider.Value,microF=(float)MicroFreqSlider.Value,clar=(float)ClaritySlider.Value;
 bool inv=InvertCheck.IsChecked==true;bool rem=RemoveBgCheck.IsChecked==true;bool zeroMid=ZeroMidGrayCheck.IsChecked==true;float zeroL=(float)ZeroLevelSlider.Value+(zeroMid?0.5f:0f);
 var depth=aiRawDepth;int w=aiRawW,h=aiRawH;var bgra=curBgra;var mask=bgMask;
 liveCts?.Cancel();var cts=new CancellationTokenSource();liveCts=cts;
 Task.Run(()=>{
 if(cts.IsCancellationRequested) return;
-var proc=ImageProcessor.ProcessForSculptOKQuality(depth!,w,h,bgra,str,det,lowF,midF,highF,gam,inv,hi,mid,sh,zeroMid,zeroL,rem,mask,fl,flR);
+var proc=ImageProcessor.ProcessForSculptOKQuality(depth!,w,h,bgra,str,det,lowF,midF,highF,gam,inv,hi,mid,sh,zeroMid,zeroL,rem,mask,fl,flR,macroFreq:macroF,microFreq:microF,clarity:clar);
 if(cts.IsCancellationRequested) return;
 Dispatcher.Invoke(()=>{
 if(cts.IsCancellationRequested) return;
@@ -177,7 +177,7 @@ EnableSaveButtons();
 void ScheduleLiveUpdate(){liveTimer.Stop();liveTimer.Start();}
 void DoLiveUpdate(){if(AiModelCheck.IsChecked==true) ReprocAiLive();else Reproc();}
 void Toggle_Changed(object s,RoutedEventArgs e){ScheduleLiveUpdate();}
-void Slider_ValueChanged(object s,RoutedPropertyChangedEventArgs<double> e){if(StrengthLabel!=null) StrengthLabel.Text=StrengthSlider.Value.ToString("0.0");if(DetailLabel!=null) DetailLabel.Text=DetailSlider.Value.ToString("0.00");if(GammaLabel!=null) GammaLabel.Text=GammaSlider.Value.ToString("0.00");if(ShadowsLabel!=null) ShadowsLabel.Text=ShadowsSlider.Value.ToString("0.00");if(MidtonesLabel!=null) MidtonesLabel.Text=MidtonesSlider.Value.ToString("0.00");if(HighlightsLabel!=null) HighlightsLabel.Text=HighlightsSlider.Value.ToString("0.00");if(FlattenLabel!=null) FlattenLabel.Text=FlattenSlider.Value.ToString("0.00");if(FlattenRadiusLabel!=null) FlattenRadiusLabel.Text=FlattenRadiusSlider.Value.ToString("0");if(LowFreqLabel!=null) LowFreqLabel.Text=LowFreqSlider.Value.ToString("0.00");if(MidFreqLabel!=null) MidFreqLabel.Text=MidFreqSlider.Value.ToString("0.00");if(HighFreqLabel!=null) HighFreqLabel.Text=HighFreqSlider.Value.ToString("0.00");if(SeamBlendLabel!=null) SeamBlendLabel.Text=SeamBlendSlider.Value.ToString("0.00");if(ZeroLevelLabel!=null) ZeroLevelLabel.Text=ZeroLevelSlider.Value.ToString("0.00");if(AiModelCheck!=null&&((AiModelCheck.IsChecked==false&&curBgra!=null)||(AiModelCheck.IsChecked==true&&aiRawDepth!=null))) ScheduleLiveUpdate();}
+void Slider_ValueChanged(object s,RoutedPropertyChangedEventArgs<double> e){if(StrengthLabel!=null) StrengthLabel.Text=StrengthSlider.Value.ToString("0.0");if(DetailLabel!=null) DetailLabel.Text=DetailSlider.Value.ToString("0.00");if(GammaLabel!=null) GammaLabel.Text=GammaSlider.Value.ToString("0.00");if(ShadowsLabel!=null) ShadowsLabel.Text=ShadowsSlider.Value.ToString("0.00");if(MidtonesLabel!=null) MidtonesLabel.Text=MidtonesSlider.Value.ToString("0.00");if(HighlightsLabel!=null) HighlightsLabel.Text=HighlightsSlider.Value.ToString("0.00");if(FlattenLabel!=null) FlattenLabel.Text=FlattenSlider.Value.ToString("0.00");if(FlattenRadiusLabel!=null) FlattenRadiusLabel.Text=FlattenRadiusSlider.Value.ToString("0");if(LowFreqLabel!=null) LowFreqLabel.Text=LowFreqSlider.Value.ToString("0.00");if(MidFreqLabel!=null) MidFreqLabel.Text=MidFreqSlider.Value.ToString("0.00");if(HighFreqLabel!=null) HighFreqLabel.Text=HighFreqSlider.Value.ToString("0.00");if(MacroFreqLabel!=null) MacroFreqLabel.Text=MacroFreqSlider.Value.ToString("0.00");if(MicroFreqLabel!=null) MicroFreqLabel.Text=MicroFreqSlider.Value.ToString("0.00");if(ClarityLabel!=null) ClarityLabel.Text=ClaritySlider.Value.ToString("0.00");if(SeamBlendLabel!=null) SeamBlendLabel.Text=SeamBlendSlider.Value.ToString("0.00");if(ZeroLevelLabel!=null) ZeroLevelLabel.Text=ZeroLevelSlider.Value.ToString("0.00");if(AiModelCheck!=null&&((AiModelCheck.IsChecked==false&&curBgra!=null)||(AiModelCheck.IsChecked==true&&aiRawDepth!=null))) ScheduleLiveUpdate();}
 // --- Multi-map preview: thumbnail strip + tiled-preview toggle -----------------------------
 void ShowFlatPreview(){OutputImage.Visibility=Visibility.Visible;PreviewViewport.Visibility=Visibility.Collapsed;}
 void RefreshMainView(){
@@ -352,15 +352,15 @@ MessageBox.Show($"Saved to {dir}");
 }
 // --- Presets ---------------------------------------------------------------------------------
 sealed class Preset{
-public double Flatten{get;set;} public double FlattenRadius{get;set;} public double LowFreq{get;set;} public double MidFreq{get;set;} public double HighFreq{get;set;} public double Detail{get;set;} public double Gamma{get;set;} public double Shadows{get;set;} public double Midtones{get;set;} public double Highlights{get;set;} public double SeamBlend{get;set;} public double ZeroLevel{get;set;} public double Strength{get;set;} public double NormalStrength{get;set;} public double AOStrength{get;set;} public double AOBlur{get;set;}
+public double Flatten{get;set;} public double FlattenRadius{get;set;} public double LowFreq{get;set;} public double MidFreq{get;set;} public double HighFreq{get;set;} public double Detail{get;set;} public double MacroFreq{get;set;} public double MicroFreq{get;set;} public double Clarity{get;set;} public double Gamma{get;set;} public double Shadows{get;set;} public double Midtones{get;set;} public double Highlights{get;set;} public double SeamBlend{get;set;} public double ZeroLevel{get;set;} public double Strength{get;set;} public double NormalStrength{get;set;} public double AOStrength{get;set;} public double AOBlur{get;set;}
 public bool UseLab{get;set;} public bool Percentile{get;set;} public bool Seamless{get;set;} public bool ZeroMidGray{get;set;} public bool Invert{get;set;} public bool RemoveBg{get;set;} public bool AutoCrop{get;set;} public bool HighQuality{get;set;} public bool InvertNormalY{get;set;} public bool EdgePreserveSmooth{get;set;} public bool AiModel{get;set;}
 }
 Preset CapturePreset()=>new Preset{
-Flatten=FlattenSlider.Value,FlattenRadius=FlattenRadiusSlider.Value,LowFreq=LowFreqSlider.Value,MidFreq=MidFreqSlider.Value,HighFreq=HighFreqSlider.Value,Detail=DetailSlider.Value,Gamma=GammaSlider.Value,Shadows=ShadowsSlider.Value,Midtones=MidtonesSlider.Value,Highlights=HighlightsSlider.Value,SeamBlend=SeamBlendSlider.Value,ZeroLevel=ZeroLevelSlider.Value,Strength=StrengthSlider.Value,NormalStrength=NormalStrengthSlider.Value,AOStrength=AOStrengthSlider.Value,AOBlur=AOBlurSlider.Value,
+Flatten=FlattenSlider.Value,FlattenRadius=FlattenRadiusSlider.Value,LowFreq=LowFreqSlider.Value,MidFreq=MidFreqSlider.Value,HighFreq=HighFreqSlider.Value,Detail=DetailSlider.Value,MacroFreq=MacroFreqSlider.Value,MicroFreq=MicroFreqSlider.Value,Clarity=ClaritySlider.Value,Gamma=GammaSlider.Value,Shadows=ShadowsSlider.Value,Midtones=MidtonesSlider.Value,Highlights=HighlightsSlider.Value,SeamBlend=SeamBlendSlider.Value,ZeroLevel=ZeroLevelSlider.Value,Strength=StrengthSlider.Value,NormalStrength=NormalStrengthSlider.Value,AOStrength=AOStrengthSlider.Value,AOBlur=AOBlurSlider.Value,
 UseLab=UseLabCheck.IsChecked==true,Percentile=PercentileCheck.IsChecked==true,Seamless=SeamlessCheck.IsChecked==true,ZeroMidGray=ZeroMidGrayCheck.IsChecked==true,Invert=InvertCheck.IsChecked==true,RemoveBg=RemoveBgCheck.IsChecked==true,AutoCrop=AutoCropCheck.IsChecked==true,HighQuality=HighQualityCheck.IsChecked==true,InvertNormalY=InvertNormalYCheck.IsChecked==true,EdgePreserveSmooth=EdgePreserveSmoothCheck.IsChecked==true,AiModel=AiModelCheck.IsChecked==true
 };
 void ApplyPreset(Preset p){
-FlattenSlider.Value=p.Flatten;FlattenRadiusSlider.Value=p.FlattenRadius;LowFreqSlider.Value=p.LowFreq;MidFreqSlider.Value=p.MidFreq;HighFreqSlider.Value=p.HighFreq;DetailSlider.Value=p.Detail;GammaSlider.Value=p.Gamma;ShadowsSlider.Value=p.Shadows;MidtonesSlider.Value=p.Midtones;HighlightsSlider.Value=p.Highlights;SeamBlendSlider.Value=p.SeamBlend;ZeroLevelSlider.Value=p.ZeroLevel;StrengthSlider.Value=p.Strength;NormalStrengthSlider.Value=p.NormalStrength;AOStrengthSlider.Value=p.AOStrength;AOBlurSlider.Value=p.AOBlur;
+FlattenSlider.Value=p.Flatten;FlattenRadiusSlider.Value=p.FlattenRadius;LowFreqSlider.Value=p.LowFreq;MidFreqSlider.Value=p.MidFreq;HighFreqSlider.Value=p.HighFreq;DetailSlider.Value=p.Detail;MacroFreqSlider.Value=p.MacroFreq;MicroFreqSlider.Value=p.MicroFreq;ClaritySlider.Value=p.Clarity;GammaSlider.Value=p.Gamma;ShadowsSlider.Value=p.Shadows;MidtonesSlider.Value=p.Midtones;HighlightsSlider.Value=p.Highlights;SeamBlendSlider.Value=p.SeamBlend;ZeroLevelSlider.Value=p.ZeroLevel;StrengthSlider.Value=p.Strength;NormalStrengthSlider.Value=p.NormalStrength;AOStrengthSlider.Value=p.AOStrength;AOBlurSlider.Value=p.AOBlur;
 UseLabCheck.IsChecked=p.UseLab;PercentileCheck.IsChecked=p.Percentile;SeamlessCheck.IsChecked=p.Seamless;ZeroMidGrayCheck.IsChecked=p.ZeroMidGray;InvertCheck.IsChecked=p.Invert;RemoveBgCheck.IsChecked=p.RemoveBg;AutoCropCheck.IsChecked=p.AutoCrop;HighQualityCheck.IsChecked=p.HighQuality;InvertNormalYCheck.IsChecked=p.InvertNormalY;EdgePreserveSmoothCheck.IsChecked=p.EdgePreserveSmooth;AiModelCheck.IsChecked=p.AiModel;
 ScheduleLiveUpdate();
 }
@@ -381,7 +381,7 @@ if(p!=null) ApplyPreset(p);
 // Matches the default Value="..."/IsChecked="..." attributes in MainWindow.xaml — if you change
 // a default there, update this to match so Reset actually resets to the shipped defaults.
 static Preset DefaultPreset()=>new Preset{
-Flatten=0.35,FlattenRadius=40,LowFreq=1,MidFreq=1,HighFreq=1,Detail=0.85,Gamma=1,Shadows=1,Midtones=1,Highlights=1,SeamBlend=0.3,ZeroLevel=0,Strength=1,NormalStrength=2,AOStrength=3,AOBlur=12,
+Flatten=0.35,FlattenRadius=40,LowFreq=1,MidFreq=1,HighFreq=1,Detail=0.85,MacroFreq=0,MicroFreq=0,Clarity=0,Gamma=1,Shadows=1,Midtones=1,Highlights=1,SeamBlend=0.3,ZeroLevel=0,Strength=1,NormalStrength=2,AOStrength=3,AOBlur=12,
 UseLab=true,Percentile=true,Seamless=false,ZeroMidGray=false,Invert=false,RemoveBg=true,AutoCrop=false,HighQuality=false,InvertNormalY=false,EdgePreserveSmooth=false,AiModel=false
 };
 void Reset_Click(object s,RoutedEventArgs e){ApplyPreset(DefaultPreset());}
@@ -454,7 +454,7 @@ catch(Exception ex){MessageBox.Show($"Couldn't read folder: {ex.Message}");retur
 if(files.Length==0){MessageBox.Show("No images found in that folder.");return;}
 
 bool ai=AiModelCheck.IsChecked==true,hq=HighQualityCheck.IsChecked==true,rem=RemoveBgCheck.IsChecked==true,autoCrop=AutoCropCheck.IsChecked==true;
-float fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,det=(float)DetailSlider.Value,gam=(float)GammaSlider.Value,str=(float)StrengthSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value;
+float fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,det=(float)DetailSlider.Value,gam=(float)GammaSlider.Value,str=(float)StrengthSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value,macroF=(float)MacroFreqSlider.Value,microF=(float)MicroFreqSlider.Value,clar=(float)ClaritySlider.Value;
 bool inv=InvertCheck.IsChecked==true,lab=UseLabCheck.IsChecked==true,seam=SeamlessCheck.IsChecked==true,perc=PercentileCheck.IsChecked==true;
 float seamB=(float)SeamBlendSlider.Value;bool zeroMid=ZeroMidGrayCheck.IsChecked==true;float zeroL=(float)ZeroLevelSlider.Value+(zeroMid?0.5f:0f);
 float normStrength=(float)NormalStrengthSlider.Value;bool invY=InvertNormalYCheck.IsChecked==true;bool edgeSmooth=EdgePreserveSmoothCheck.IsChecked==true;
@@ -477,7 +477,7 @@ bgra=cropped.bgra;w=cropped.w;h=cropped.h;mask=cropped.mask;
 float[] depth;int dw=w,dh=h;
 if(ai){
 var res=await eng!.EstimateDepthAsync(f,hq);
-depth=await Task.Run(()=>ImageProcessor.ProcessForSculptOKQuality(res.Depth,res.Width,res.Height,bgra,str,det,lowF,midF,highF,gam,inv,hi,mid,sh,zeroMid,zeroL,rem,mask,fl,flR));
+depth=await Task.Run(()=>ImageProcessor.ProcessForSculptOKQuality(res.Depth,res.Width,res.Height,bgra,str,det,lowF,midF,highF,gam,inv,hi,mid,sh,zeroMid,zeroL,rem,mask,fl,flR,macroFreq:macroF,microFreq:microF,clarity:clar));
 dw=res.Width;dh=res.Height;
 }else{
 depth=await Task.Run(()=>ImageProcessor.ProcessTextureAtlasAdvanced(bgra,w,h,det,gam,inv,hi,mid,sh,rem,lab,fl,flR,lowF,midF,highF,seam,seamB,zeroMid,zeroL,perc,0.02f,0.98f,mask));
