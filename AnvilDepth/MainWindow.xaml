@@ -22,6 +22,10 @@
                         <Button x:Name="SavePresetBtn" Content="Save Preset" Margin="0,0,4,0" Padding="8,2" Click="SavePreset_Click"/>
                         <Button x:Name="LoadPresetBtn" Content="Load Preset" Padding="8,2" Click="LoadPreset_Click"/>
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <Button x:Name="AutoSuggestBtn" Content="🔍 Auto-Suggest Settings" Margin="0,0,4,0" Padding="8,2" Click="AutoSuggest_Click" ToolTip="Analyzes the loaded image's contrast/detail/structure (locally, no AI model, no network) and proposes starting slider values."/>
+                        <Button x:Name="HelpToggleBtn" Content="? Ask" Padding="8,2" Click="HelpToggle_Click" ToolTip="Local keyword FAQ about what each slider does — not a conversational AI, fully offline."/>
+                    </StackPanel>
                     <CheckBox x:Name="LargeTextCheck" Content="Large Text" Foreground="#AAA" FontSize="13" Margin="0,8,0,0" Checked="LargeText_Changed" Unchecked="LargeText_Changed"/>
                     <CheckBox x:Name="AiModelCheck" Content="Use AI" Foreground="White" Checked="Mode_Changed" Unchecked="Mode_Changed" Margin="0,8,0,0"/>
                     <StackPanel Orientation="Horizontal" Margin="18,4,0,0">
@@ -156,6 +160,14 @@
                         <CheckBox x:Name="TilePreviewCheck" Content="Show Tiled 2x2" Foreground="#AAA" FontSize="13" VerticalAlignment="Center" Margin="16,0,0,0" Checked="TilePreview_Changed" Unchecked="TilePreview_Changed"/>
                         <Button x:Name="OpenPresetsFolderBtn" Content="Open Presets Folder" VerticalAlignment="Center" Margin="16,0,0,0" Padding="8,3" Click="OpenPresetsFolder_Click"/>
                         <Button x:Name="OpenLogsFolderBtn" Content="Open Logs Folder" VerticalAlignment="Center" Margin="8,0,0,0" Padding="8,3" Click="OpenLogsFolder_Click"/>
+                        <Border x:Name="HelpPanel" Visibility="Collapsed" Background="#141414" BorderBrush="#333" BorderThickness="1" Margin="16,0,0,0" Padding="8" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Ask (offline keyword match):" Foreground="#888" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBox x:Name="HelpQueryBox" Width="140" VerticalAlignment="Center" KeyDown="HelpQueryBox_KeyDown"/>
+                                <Button x:Name="HelpAskBtn" Content="Ask" Margin="6,0,0,0" Padding="8,2" Click="HelpAsk_Click" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="HelpAnswerText" Text="" Foreground="#DDD" FontSize="11" TextWrapping="Wrap" Margin="10,0,0,0" MaxWidth="320" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Border>
             </Grid>

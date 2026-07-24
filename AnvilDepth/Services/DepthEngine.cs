@@ -38,6 +38,7 @@ public sealed class DepthEngine : IDisposable
     private InferenceSession? _session;
     private int _netW = DefaultNetSize;
     private int _netH = DefaultNetSize;
+    private string _currentModelFileName = "model.onnx";
 
     // Guards every read/dispose/swap of _session. This is the actual fix for the crash-on-model-
     // switch bug: LoadModelAsync used to do `_session?.Dispose(); _session = newSession;` with no
@@ -105,11 +106,39 @@ public sealed class DepthEngine : IDisposable
                 // mismatch the first time a differently-sized model (e.g. a Base/Large variant
                 // exported without dynamic axes) gets loaded.
                 int netH = DefaultNetSize, netW = DefaultNetSize;
+                bool dimsAreFixed = false;
                 var inputDims = newSession.InputMetadata.Values.First().Dimensions;
                 if (inputDims.Length == 4)
                 {
-                    if (inputDims[2] > 0) netH = inputDims[2];
-                    if (inputDims[3] > 0) netW = inputDims[3];
+                    if (inputDims[2] > 0) { netH = inputDims[2]; dimsAreFixed = true; }
+                    if (inputDims[3] > 0) { netW = inputDims[3]; dimsAreFixed = true; }
+                }
+
+                if (!dimsAreFixed)
+                {
+                    // Dynamic axes declared, but some ViT-based exports (DPT/MiDaS being a known
+                    // example) bake their position embeddings in for one specific training
+                    // resolution despite advertising a dynamic input shape. Running at the wrong
+                    // size doesn't fail cleanly — it throws deep inside the graph (e.g. an
+                    // "embeddings/Add" shape mismatch from OnnxRuntimeException) with a message
+                    // that gives no hint what size WOULD work. Probe a short list of common
+                    // training resolutions instead of blindly trusting DefaultNetSize, and use
+                    // whichever one the model actually accepts.
+                    string inputName = newSession.InputMetadata.Keys.First();
+                    int[] candidates = { DefaultNetSize, 384, 512, 256, 224 };
+                    bool found = false;
+                    foreach (int size in candidates)
+                    {
+                        if (TryProbe(newSession, inputName, size))
+                        {
+                            netH = size; netW = size; found = true;
+                            Logger.Log($"DepthEngine.LoadModelAsync: '{modelFileName}' declares dynamic input dims but a {size}x{size} probe succeeded — using that.");
+                            break;
+                        }
+                        Logger.Log($"DepthEngine.LoadModelAsync: '{modelFileName}' rejected a {size}x{size} probe, trying next candidate.");
+                    }
+                    if (!found)
+                        Logger.Log($"DepthEngine.LoadModelAsync: '{modelFileName}' rejected every probed resolution ({string.Join(",", candidates)}). Falling back to {DefaultNetSize}x{DefaultNetSize} — generation will likely fail; check the model's preprocessor_config.json for its real expected size and add it to the candidates list.");
                 }
 
                 // Only swap over now that the new session loaded successfully — old model
@@ -123,6 +152,7 @@ public sealed class DepthEngine : IDisposable
                     _session = newSession;
                     _netH = netH;
                     _netW = netW;
+                    _currentModelFileName = modelFileName;
                 }
                 finally
                 {
@@ -138,6 +168,25 @@ public sealed class DepthEngine : IDisposable
                 return $"Failed to load {modelFileName}: {ex.Message}";
             }
         });
+    }
+
+    /// <summary>Runs one lightweight forward pass at the given square resolution purely to test
+    /// whether the model accepts it — used when a model's declared input shape is dynamic but may
+    /// not actually be flexible in practice (see the dimsAreFixed branch in LoadModelAsync above).
+    /// Any exception (shape mismatch, unsupported op at that size, etc.) means "no."</summary>
+    private static bool TryProbe(InferenceSession session, string inputName, int size)
+    {
+        try
+        {
+            var dummy = new DenseTensor<float>(new[] { 1, 3, size, size });
+            var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor(inputName, dummy) };
+            using var results = session.Run(inputs);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public Task<DepthResult> EstimateDepthAsync(string path, bool highQuality, IProgress<double>? progress = null)
@@ -167,8 +216,8 @@ public sealed class DepthEngine : IDisposable
                 catch (OnnxRuntimeException ex)
                 {
                     throw new InvalidOperationException(
-                        $"The loaded model (Models\\model.onnx) rejected the input it was given ({_netW}x{_netH}, 3-channel). " +
-                        $"This usually means it's a different Depth-Anything V2 export than expected (wrong input layout, " +
+                        $"The loaded model (Models\\{_currentModelFileName}) rejected the input it was given ({_netW}x{_netH}, 3-channel). " +
+                        $"This usually means it's a different export than expected (wrong input layout, " +
                         $"or a fixed shape that doesn't match {_netW}x{_netH}). Original error: {ex.Message}", ex);
                 }
                 using var _globalDepthDisposeGuard = globalDepth;

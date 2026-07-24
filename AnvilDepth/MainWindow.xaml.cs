@@ -156,26 +156,29 @@ aiRawDepth=null;
 ClearNormalMap();ClearAOMap();
 if(curPath!=null&&AiModelCheck.IsChecked==true) Generate_Click(this,new RoutedEventArgs());
 }
-void Reproc(){try{if(AiModelCheck.IsChecked==true) return;if(curBgra==null) return;float fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,det=(float)DetailSlider.Value,gam=(float)GammaSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value;bool inv=InvertCheck.IsChecked==true,rem=RemoveBgCheck.IsChecked==true,lab=UseLabCheck.IsChecked==true,seam=SeamlessCheck.IsChecked==true;float seamB=(float)SeamBlendSlider.Value;bool zeroMid=ZeroMidGrayCheck.IsChecked==true;float zeroL=(float)ZeroLevelSlider.Value+(zeroMid?0.5f:0f);bool perc=PercentileCheck.IsChecked==true;var proc=ImageProcessor.ProcessTextureAtlasAdvanced(curBgra!,dW,dH,det,gam,inv,hi,mid,sh,rem,lab,fl,flR,lowF,midF,highF,seam,seamB,zeroMid,zeroL,perc,0.02f,0.98f,bgMask);curDepth=proc;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,dW,dH));EnableSaveButtons();}catch{}}
+void Reproc(){try{if(AiModelCheck.IsChecked==true) return;if(curBgra==null){Logger.Log("Reproc: skipped, curBgra is null (no image loaded).");return;}float fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,det=(float)DetailSlider.Value,gam=(float)GammaSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value;bool inv=InvertCheck.IsChecked==true,rem=RemoveBgCheck.IsChecked==true,lab=UseLabCheck.IsChecked==true,seam=SeamlessCheck.IsChecked==true;float seamB=(float)SeamBlendSlider.Value;bool zeroMid=ZeroMidGrayCheck.IsChecked==true;float zeroL=(float)ZeroLevelSlider.Value+(zeroMid?0.5f:0f);bool perc=PercentileCheck.IsChecked==true;var proc=ImageProcessor.ProcessTextureAtlasAdvanced(curBgra!,dW,dH,det,gam,inv,hi,mid,sh,rem,lab,fl,flR,lowF,midF,highF,seam,seamB,zeroMid,zeroL,perc,0.02f,0.98f,bgMask);curDepth=proc;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,dW,dH));EnableSaveButtons();Logger.Log("Reproc: live update applied (Relief mode).");}catch(Exception ex){Logger.LogException("Reproc",ex);}}
 void ReprocAiLive(){
-if(aiRawDepth==null) return;
+if(aiRawDepth==null){Logger.Log("ReprocAiLive: skipped, aiRawDepth is null — click Generate at least once for this image/model before sliders will live-update.");return;}
 float str=(float)StrengthSlider.Value,det=(float)DetailSlider.Value,lowF=(float)LowFreqSlider.Value,midF=(float)MidFreqSlider.Value,highF=(float)HighFreqSlider.Value,gam=(float)GammaSlider.Value,hi=(float)HighlightsSlider.Value,mid=(float)MidtonesSlider.Value,sh=(float)ShadowsSlider.Value,fl=(float)FlattenSlider.Value,flR=(float)FlattenRadiusSlider.Value,macroF=(float)MacroFreqSlider.Value,microF=(float)MicroFreqSlider.Value,clar=(float)ClaritySlider.Value;
 bool inv=InvertCheck.IsChecked==true;bool rem=RemoveBgCheck.IsChecked==true;bool zeroMid=ZeroMidGrayCheck.IsChecked==true;float zeroL=(float)ZeroLevelSlider.Value+(zeroMid?0.5f:0f);
 var depth=aiRawDepth;int w=aiRawW,h=aiRawH;var bgra=curBgra;var mask=bgMask;
 liveCts?.Cancel();var cts=new CancellationTokenSource();liveCts=cts;
 Task.Run(()=>{
-if(cts.IsCancellationRequested) return;
+try{
+if(cts.IsCancellationRequested){Logger.Log("ReprocAiLive: cancelled before starting (a newer slider change superseded this one).");return;}
 var proc=ImageProcessor.ProcessForSculptOKQuality(depth!,w,h,bgra,str,det,lowF,midF,highF,gam,inv,hi,mid,sh,zeroMid,zeroL,rem,mask,fl,flR,macroFreq:macroF,microFreq:microF,clarity:clar);
-if(cts.IsCancellationRequested) return;
+if(cts.IsCancellationRequested){Logger.Log("ReprocAiLive: cancelled after processing, before applying to UI (a newer slider change superseded this one).");return;}
 Dispatcher.Invoke(()=>{
 if(cts.IsCancellationRequested) return;
 curDepth=proc;dW=w;dH=h;SetDepthBitmap(ImageProcessor.FloatArrayToBitmapSource(proc,w,h));
 EnableSaveButtons();
+Logger.Log("ReprocAiLive: live update applied to preview.");
 });
+}catch(Exception ex){Logger.LogException("ReprocAiLive.Task.Run",ex);}
 });
 }
 void ScheduleLiveUpdate(){liveTimer.Stop();liveTimer.Start();}
-void DoLiveUpdate(){if(AiModelCheck.IsChecked==true) ReprocAiLive();else Reproc();}
+void DoLiveUpdate(){Logger.Log($"DoLiveUpdate: timer fired, AI mode = {AiModelCheck.IsChecked==true}.");if(AiModelCheck.IsChecked==true) ReprocAiLive();else Reproc();}
 void Toggle_Changed(object s,RoutedEventArgs e){ScheduleLiveUpdate();}
 void Slider_ValueChanged(object s,RoutedPropertyChangedEventArgs<double> e){if(StrengthLabel!=null) StrengthLabel.Text=StrengthSlider.Value.ToString("0.0");if(DetailLabel!=null) DetailLabel.Text=DetailSlider.Value.ToString("0.00");if(GammaLabel!=null) GammaLabel.Text=GammaSlider.Value.ToString("0.00");if(ShadowsLabel!=null) ShadowsLabel.Text=ShadowsSlider.Value.ToString("0.00");if(MidtonesLabel!=null) MidtonesLabel.Text=MidtonesSlider.Value.ToString("0.00");if(HighlightsLabel!=null) HighlightsLabel.Text=HighlightsSlider.Value.ToString("0.00");if(FlattenLabel!=null) FlattenLabel.Text=FlattenSlider.Value.ToString("0.00");if(FlattenRadiusLabel!=null) FlattenRadiusLabel.Text=FlattenRadiusSlider.Value.ToString("0");if(LowFreqLabel!=null) LowFreqLabel.Text=LowFreqSlider.Value.ToString("0.00");if(MidFreqLabel!=null) MidFreqLabel.Text=MidFreqSlider.Value.ToString("0.00");if(HighFreqLabel!=null) HighFreqLabel.Text=HighFreqSlider.Value.ToString("0.00");if(MacroFreqLabel!=null) MacroFreqLabel.Text=MacroFreqSlider.Value.ToString("0.00");if(MicroFreqLabel!=null) MicroFreqLabel.Text=MicroFreqSlider.Value.ToString("0.00");if(ClarityLabel!=null) ClarityLabel.Text=ClaritySlider.Value.ToString("0.00");if(SeamBlendLabel!=null) SeamBlendLabel.Text=SeamBlendSlider.Value.ToString("0.00");if(ZeroLevelLabel!=null) ZeroLevelLabel.Text=ZeroLevelSlider.Value.ToString("0.00");if(AiModelCheck!=null&&((AiModelCheck.IsChecked==false&&curBgra!=null)||(AiModelCheck.IsChecked==true&&aiRawDepth!=null))) ScheduleLiveUpdate();}
 // --- Multi-map preview: thumbnail strip + tiled-preview toggle -----------------------------
@@ -385,6 +388,49 @@ Flatten=0.35,FlattenRadius=40,LowFreq=1,MidFreq=1,HighFreq=1,Detail=0.85,MacroFr
 UseLab=true,Percentile=true,Seamless=false,ZeroMidGray=false,Invert=false,RemoveBg=true,AutoCrop=false,HighQuality=false,InvertNormalY=false,EdgePreserveSmooth=false,AiModel=false
 };
 void Reset_Click(object s,RoutedEventArgs e){ApplyPreset(DefaultPreset());}
+
+void AutoSuggest_Click(object s,RoutedEventArgs e){
+if(curBgra==null){MessageBox.Show("Load an image first.");return;}
+var sug=ImageProcessor.AnalyzeAndSuggest(curBgra,dW,dH);
+FlattenSlider.Value=sug.Flatten;FlattenRadiusSlider.Value=sug.FlattenRadius;
+MacroFreqSlider.Value=sug.MacroFreq;LowFreqSlider.Value=sug.LowFreq;MidFreqSlider.Value=sug.MidFreq;HighFreqSlider.Value=sug.HighFreq;DetailSlider.Value=sug.Detail;MicroFreqSlider.Value=sug.MicroFreq;
+ClaritySlider.Value=sug.Clarity;StrengthSlider.Value=sug.Strength;
+GpuStatusText.Text="Auto-suggested from image analysis (local, no AI model) — tune from here.";
+HelpAnswerText.Text=sug.Explanation;
+if(HelpPanel.Visibility!=Visibility.Visible) HelpPanel.Visibility=Visibility.Visible;
+}
+
+// --- Local keyword FAQ ("Ask") -------------------------------------------------------------
+// Deliberately NOT a conversational AI — plain substring matching against a small curated list.
+// Honest about what it is: instant and fully offline, but it only answers what's already written
+// here. A real natural-language assistant would need a cloud LLM call, which conflicts with
+// AnvilDepth's "100% local, no network" positioning — this is the offline-compatible alternative.
+static readonly (string[] keywords,string answer)[] HelpFaq = new (string[],string)[]{
+(new[]{"macro"}, "Macro (section 3, FREQ) is broader than Low — it brings out huge, soft volume swells (a whole shoulder or torso reading as one rounded mass) that Low/Mid/High/Detail alone are too narrow to isolate. Defaults to 0 (off) so it never changes old presets unless you raise it."),
+(new[]{"micro"}, "Micro (section 3, FREQ) is finer than Detail — sub-pixel grain like pores, cloth weave, or tiny engraved texture. Defaults to 0 (off)."),
+(new[]{"clarity"}, "Clarity isn't a frequency band — it's a local-contrast punch applied AFTER the main contrast/strength step (same idea as 'Clarity' in photo editors). It makes surfaces read as more defined without touching the overall brightness curve or the fine Detail/Micro grain."),
+(new[]{"detail","texture detail","ai detail"}, "Two separate detail sources exist: Low/Mid/High/Detail reshape the AI depth model's OWN output, so they genuinely differ between Small/Base/Large/Pro. The optional texture-detail injection instead borrows grain straight from the source color photo — identical no matter which model is loaded, and the reason dark albedo (a mineral fleck, a wood knot) can get carved in as a fake dent."),
+(new[]{"hq tiled","tiled","tile"}, "HQ Tiled runs the depth model on overlapping tiles near its native resolution instead of one global low-res pass, then blends the local detail back in. Without it, Small/Base/Large/Pro all get bottlenecked through the same coarse global estimate and can look nearly identical."),
+(new[]{"flatten","de-light","delight"}, "Flatten (section 2, DE-LIGHT) removes broad, large-scale brightness gradients (uneven lighting in the source photo) before the frequency bands ever see the image. Radius controls how broad an area counts as 'lighting' versus real depth — also the main lever against the pillow effect on tiling textures."),
+(new[]{"pillow","mattress"}, "The 'pillow/mattress' effect — edges of a tiling texture bulging or receding — comes from the depth model reading a hard image boundary as 'nothing beyond this edge, so it must be receding.' Mirror-padding in DepthEngine and a higher Flatten Radius both help."),
+(new[]{"model","small","base","large","pro"}, "Small/Base/Large/Pro are separate ONNX model files. Switching requires that model's .onnx file to actually exist in your Models folder — if one is missing, the app silently keeps using whichever model was last successfully loaded, which is why two options can end up looking identical."),
+(new[]{"seamless"}, "Seamless Blend (section 5) feathers the edges of the depth map so a repeating/tiling texture doesn't show a hard seam when tiled in a 3D app — it's a post-hoc blend, not a mathematical guarantee of pixel-perfect tiling."),
+(new[]{"zero","mid-gray","midgray"}, "Zero Mid-Gray (section 6) lets you choose which gray value counts as 'perfectly flat' (zero height) — everything brighter rises, everything darker sinks, relative to that chosen level."),
+(new[]{"cavity","ao","ambient occlusion"}, "The Cavity/AO map is a derived approximation (a blurred difference against the depth map) — not a physically-based render. It's meant to add crease/contact shadowing on top of the depth or normal map inside a 3D tool."),
+(new[]{"normal map","normal"}, "The Normal Map is computed directly from the depth map above, not from a separate AI model. Strength controls how pronounced the bumps read, and Invert Y swaps between DirectX and OpenGL normal-map conventions."),
+(new[]{"export","png","exr","tiff","8-bit","16-bit","32-bit"}, "8-bit PNG (256 levels) is fine for a quick preview only. 16-bit PNG (65,536 levels) is the usual choice for most 3D tools. 32-bit EXR/TIFF give full floating-point precision for pipelines that support it."),
+(new[]{"auto-suggest","auto suggest","suggest"}, "Auto-Suggest measures the loaded image's contrast, edge/texture density, and low-frequency structure with plain OpenCV statistics, then proposes starting slider values from that — it's a heuristic, not a trained model, and the constants behind it are a first guess meant to be tuned further."),
+};
+void HelpToggle_Click(object s,RoutedEventArgs e){HelpPanel.Visibility=HelpPanel.Visibility==Visibility.Visible?Visibility.Collapsed:Visibility.Visible;}
+void HelpAsk_Click(object s,RoutedEventArgs e){AnswerHelpQuery();}
+void HelpQueryBox_KeyDown(object s,KeyEventArgs e){if(e.Key==Key.Enter) AnswerHelpQuery();}
+void AnswerHelpQuery(){
+string q=(HelpQueryBox.Text??"").ToLowerInvariant();
+if(string.IsNullOrWhiteSpace(q)){HelpAnswerText.Text="Type a word like \"macro\", \"clarity\", \"pillow\", \"hq tiled\", or \"model\" and hit Ask.";return;}
+foreach(var(keywords,answer) in HelpFaq)
+if(keywords.Any(k=>q.Contains(k))){HelpAnswerText.Text=answer;return;}
+HelpAnswerText.Text="No match in the local FAQ yet. Try: macro, micro, clarity, detail, hq tiled, flatten, pillow, model, seamless, zero mid-gray, cavity, normal map, export.";
+}
 // --- Quick numbered presets (7 slots) ------------------------------------------------------
 // A faster complement to the file-dialog Save/Load Preset buttons above: one click saves or
 // loads a fixed slot, no dialog. Save Mode gates which behavior a click performs — this keeps

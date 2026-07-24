@@ -16,6 +16,75 @@ namespace AnvilDepth.Services;
 /// </summary>
 public static class ImageProcessor
 {
+    /// <summary>Suggested starting values for the AI-mode sliders, computed from real statistics of
+    /// the loaded image (not a learned model — plain OpenCV measurements). Values are clamped to
+    /// each slider's actual UI range. Constants below are first-pass heuristics, not calibrated
+    /// against a labeled dataset — expect to retune them after testing against real textures.</summary>
+    public sealed record SuggestedSettings(
+        float Flatten, float FlattenRadius,
+        float MacroFreq, float LowFreq, float MidFreq, float HighFreq, float Detail, float MicroFreq,
+        float Clarity, float Strength, string Explanation);
+
+    /// <summary>Looks at the source color image's contrast, edge/texture density, and low-frequency
+    /// structure to propose a starting point for the frequency-band and de-light sliders — meant as
+    /// a "first guess to tune from," not a final answer. Runs entirely on the already-loaded image,
+    /// no network, no model file.</summary>
+    public static SuggestedSettings AnalyzeAndSuggest(byte[] bgra, int width, int height)
+    {
+        using var srcBgra = new Mat(height, width, MatType.CV_8UC4);
+        Marshal.Copy(bgra, 0, srcBgra.Data, bgra.Length);
+        using var bgr = new Mat();
+        Cv2.CvtColor(srcBgra, bgr, ColorConversionCodes.BGRA2BGR);
+        using var gray = new Mat();
+        Cv2.CvtColor(bgr, gray, ColorConversionCodes.BGR2GRAY);
+        using var gray32f = new Mat();
+        gray.ConvertTo(gray32f, MatType.CV_32FC1, 1.0 / 255.0);
+
+        // Global contrast: std-dev of luminance. A flat, evenly-lit texture photo sits low (~0.05-0.1);
+        // a high-contrast, strongly side-lit shot sits high (~0.2-0.3+).
+        Cv2.MeanStdDev(gray32f, out var lumaMean, out var lumaStd);
+        double globalContrast = lumaStd.Val0;
+
+        // Fine-detail density via Laplacian variance (the standard "how much high-frequency content
+        // is in this image" measure, also commonly used for blur detection). Scaled by image area so
+        // it's roughly comparable across different texture resolutions.
+        using var lap = new Mat();
+        Cv2.Laplacian(gray32f, lap, MatType.CV_32FC1, ksize: 3);
+        Cv2.MeanStdDev(lap, out _, out var lapStd);
+        double detailDensity = lapStd.Val0 * 12.0; // empirical scale factor, not derived from data
+
+        // Low-frequency structure: how much large-scale brightness variation survives a heavy blur.
+        // High = big soft shapes worth bringing out with Macro; low = the image is mostly flat or
+        // mostly fine texture with little large-scale form.
+        using var heavyBlur = new Mat();
+        Cv2.GaussianBlur(gray32f, heavyBlur, new OpenCvSharp.Size(0, 0), 32.0);
+        Cv2.MeanStdDev(heavyBlur, out _, out var blurStd);
+        double macroStructure = blurStd.Val0;
+
+        float flatten = (float)Math.Clamp(0.25 + globalContrast * 1.2, 0.1, 0.9);
+        float flattenRadius = (float)Math.Clamp(30 + macroStructure * 300, 20, 120);
+        float macroFreq = (float)Math.Clamp(macroStructure * 5.5, 0f, 1.2f);
+        float lowFreq = 1.0f; // keep the existing default — this band rarely needs to move much
+        float midFreq = (float)Math.Clamp(0.8 + detailDensity * 0.3, 0.4f, 1.6f);
+        float highFreq = (float)Math.Clamp(0.9 + detailDensity * 0.6, 0.4f, 2.2f);
+        float detail = (float)Math.Clamp(0.3 + detailDensity * 0.8, 0.15f, 1.0f);
+        float microFreq = (float)Math.Clamp(detailDensity * 0.5, 0f, 0.6f);
+        float clarity = (float)Math.Clamp(0.15 + detailDensity * 0.35, 0f, 0.6f);
+        float strength = (float)Math.Clamp(0.9 + globalContrast * 0.6, 0.6f, 1.6f);
+
+        string explanation =
+            $"Measured: contrast={globalContrast:0.00}, detail density={detailDensity:0.00}, " +
+            $"macro structure={macroStructure:0.00}. " +
+            (detailDensity > 0.6
+                ? "This looks like a busy/high-detail texture — leaned into Detail/Micro/Clarity. "
+                : "This looks like a fairly smooth image — kept Detail/Micro modest. ") +
+            (macroStructure > 0.15
+                ? "Found real large-scale shape variation — raised Macro to bring out big soft volumes."
+                : "Not much large-scale shape variation detected — left Macro low.");
+
+        return new SuggestedSettings(flatten, flattenRadius, macroFreq, lowFreq, midFreq, highFreq, detail, microFreq, clarity, strength, explanation);
+    }
+
     public static float[] ProcessTextureAtlasAdvanced(
         byte[] bgra, int width, int height,
         float detail, float gamma, bool invert,
